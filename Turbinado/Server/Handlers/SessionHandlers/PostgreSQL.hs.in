@@ -1,0 +1,17 @@
+module HSPR.SessionHandlers.PostgreSQL where
+
+import HSPR.SessionHandlers.GenericDB
+import Database.HaskellDB.HSQL.PostgreSQL
+
+
+sessionHandler = mkSessionDB connection
+
+connection = postgresqlConnect options
+  where options = PostgreSQLOptions {
+        		server	= "@DB_HOST@",
+        		db	= sessionDBname,
+        		uid	= "@DB_UID@",
+        		pwd	= "@DB_PWD@"
+        		}
+
+sessionDBname = "@DB_NAME@"

@@ -1,0 +1,34 @@
+
+h1 {
+  margin-bottom: 0px;
+  padding: 10px;
+  font-size: 26px;
+  font-style: bold
+}
+
+h2 {
+  font-size: 1.1em;
+  font-weight: bold;
+  padding-top: 10px;
+}
+
+.wrapper {
+  width: 977px;
+  margin: auto;
+}
+
+
+div.footer {
+  text-align: center;
+}
+
+div.content-block {
+  margin: 0px;
+}
+
+body {
+  margin: 0;
+  font-family: Tahoma, sans-serif;
+  background-color: #D4E0F2;
+}
+

@@ -1,0 +1,32 @@
+Name:                turbinado
+Version:             0.1
+Synopsis:            Haskell web application server
+Description:         The Haskell web application server
+License:             GPL
+License-file:        LICENSE
+Author:              Alson Kemp
+Maintainer:          Alson Kemp (alson@alsonkemp.com)
+Build-Type:          Simple
+
+Executable server
+  Main-is:             Turbinado/Server.hs
+  Build-Depends:       base, bytestring, containers, directory, filepath, harp, hslogger, hsx, HTTP, mtl, network, old-locale, old-time, parsec, plugins, pretty, regex-compat, time
+  Hs-Source-Dirs:      . , config
+  ghc-options: -F -pgmFtrhsx -O -DPRINTDEBUG 
+  Extensions: MultiParamTypeClasses,
+            FunctionalDependencies,
+            TypeFamilies,
+            RankNTypes,
+            PolymorphicComponents,
+            ExistentialQuantification,
+            FlexibleContexts,
+            FlexibleInstances,
+            EmptyDataDecls,
+            CPP,
+            TypeSynonymInstances,
+            OverlappingInstances,
+            UndecidableInstances,
+            PatternGuards,
+            MultiParamTypeClasses,
+            PatternSignatures,
+            DeriveDataTypeable
