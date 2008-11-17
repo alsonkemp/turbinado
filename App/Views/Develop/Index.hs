@@ -1,5 +1,3 @@
-module Index (page) where
-
 page :: View XML
 page     =  <div>
               <h2>! Windows</h2>

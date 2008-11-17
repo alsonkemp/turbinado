@@ -1,0 +1,5 @@
+dist
+tmp/cache
+tmp/compiled
+*.hi
+*.o
