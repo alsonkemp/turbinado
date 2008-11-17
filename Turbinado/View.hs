@@ -7,6 +7,7 @@ module Turbinado.View (
         -- limited export from Turbinado.View.Monad
         View, ViewT, ViewT',
         runView, runViewT,
+        get, put,
         -- * Functions
         doIO, catch,
 
@@ -19,19 +20,24 @@ module Turbinado.View (
         module Turbinado.Environment.CodeStore,
         module Turbinado.Environment.Request,
         module Turbinado.Environment.Response,
+        module Turbinado.Environment.Settings,
         ) where
 
 import Control.Exception (catchDyn)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans (MonadIO(..))
+import Data.List
 import Data.Maybe
 import qualified Network.HTTP as HTTP
+import qualified Network.URI  as URI
 import Prelude hiding (catch)
+import System.FilePath
 
 import Turbinado.Environment
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
+import Turbinado.Environment.Settings
 import Turbinado.View.Exception
 import Turbinado.View.HTML
 import Turbinado.View.Monad
@@ -48,18 +54,6 @@ evalView p e =
               case (HTTP.rspCode $ getResponse e') of
                 (0,0,0) -> setResponse ((getResponse e) {HTTP.rspCode = (2,0,0), HTTP.rspBody = renderAsHTML x}) e'
                 _       -> return e'
-
-{-
-evalView :: View XML -> EnvironmentFilter
-evalView p e =
-        catch 
-          (do (x, e') <- runView p e
-              case (HTTP.rspCode $ getResponse e') of
-                (0,0,0) -> return $ setResponse ((getResponse e) {HTTP.rspCode = (2,0,0), HTTP.rspBody = renderXML x}) e'
-                _       -> return e' ) 
-          (\ex -> setResponse (HTTP.Response (4,0,0) "" [] "evalView failed") e)
--}
-
 
 defaultContentType :: String
 defaultContentType = "text/html; charset=ISO-8859-1"
@@ -108,3 +102,5 @@ setCookie c = getResponse >>= return . HTTP.replaceHeader HTTP.HdrSetCookie (Coo
 deleteCookie :: Cookie.Cookie -> View HTTP.Response
 deleteCookie = setCookie . Cookie.deleteCookie
 -}
+
+

@@ -30,7 +30,7 @@ tryStaticContent e =
          trydirs = case (length f) of
            0 -> map (\s -> joinPath $ map normalise [cDir, s, "index.html"]) staticDirs
            _ -> map (\s -> joinPath $ map normalise [cDir, s, f]) staticDirs
-     debugM e $ "  tryStaticContent over " ++ (show trydirs)
+     -- debugM e $ "  tryStaticContent over " ++ (show trydirs)
      foldl ( >>= ) (return e) $ map (tryToGetStaticContent mt) trydirs
 
 tryToGetStaticContent :: MimeTypes -> FilePath  -> EnvironmentFilter

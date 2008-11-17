@@ -3,8 +3,8 @@ page     =  <div>
               <h2>! Windows</h2>
               <p>This software doesn't work on Windows.  Linux/Unix only at this point.</p>
               
-              <h2>Darcs</h2>
-              <p> The <em>darcs</em> repo is at <% anchorTag "http://darcs.turbinado.org" "darcs.turbinado.org" %>.  Send commits to maintainer@turbinado.org</p>
+              <h2>Git Repo</h2>
+              <p> The <em>git</em> repo is at <% anchorTag "http://github.com/alsonkemp/turbinado/tree/master" "http://github.com/alsonkemp/turbinado/tree/master" %>.  Push patches into the repo.</p>
               
               <h2>Dependencies</h2>
               <p>You'll need the following:</p>

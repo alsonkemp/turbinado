@@ -20,9 +20,9 @@ insertView = do e <- getEnvironment
                 doIO $ debugM e $ "    Layout: insertView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
                 c <- doIO $ retrieveCode e CTView cl
                 case c of
-                  CodeLoadView       v _ -> v 
-                  CodeLoadController _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                  CodeLoadFailure        -> return $ cdata $ "CodeLoadFailure: insertView : " ++ (show $ fst $ getView e) ++ " - " ++ (show $ snd $ getView e)
+                  CodeLoadView       v _ _ -> v 
+                  CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                  CodeLoadFailure          -> return $ cdata $ "CodeLoadFailure: insertView : " ++ (show $ fst $ getView e) ++ " - " ++ (show $ snd $ getView e)
 
 styleSheet :: String -> String -> View XML
 styleSheet s m = return $ cdata $ "<link media=\"" ++ m ++"\" type=\"text/css\" rel=\"stylesheet\" href=\"/css/" ++ s ++".css\">"

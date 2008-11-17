@@ -1,11 +1,5 @@
-module Turbinado.Stubs.View (
-  anchorTag,
-  module Turbinado.Stubs.Common,
-  module Turbinado.View
-  ) where
-
-import Turbinado.Stubs.Common
+import Config.Master
 import Turbinado.View
+import Turbinado.View.Helpers
+-- SPLIT HERE
 
-anchorTag :: String -> String -> View XML
-anchorTag l t = <a href=l> <% t %> </a>

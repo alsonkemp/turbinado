@@ -1,9 +1,7 @@
-module Turbinado.Stubs.Layout (
-  module Turbinado.Stubs.Common,
-  module Turbinado.Layout,
-  module Turbinado.Stubs.View
-  ) where
-
-import Turbinado.Stubs.Common
-import Turbinado.Stubs.View
+import Config.Master
 import Turbinado.Layout
+import Turbinado.View
+import Turbinado.View.Helpers
+
+-- SPLIT HERE
+

@@ -68,19 +68,13 @@ startServer pnr
                                          , addMimeTypesToEnvironment "Config/mime.types"]
          debugM e "Start listening"
          sock <- listenOn $ PortNumber pnr
-         debugM e "Create worker pool"
          workerPoolMVar <- newMVar $ WorkerPool 0 [] []
          debugM e "Need to fork off the threadKillerLoop"
-         debugM e "Start connection loop"
          mainLoop sock workerPoolMVar e
     where
       --mainLoop :: Socket -> WorkerPool -> IO ()
       mainLoop sock workerPoolMVar e = 
-          do debugM e "Connection loop"
-             debugM e "Wait for connections"
-             (sock', sockAddr) <- accept sock
-             debugM e "Connection accepted"
-             debugM e "Forward to a worker"
+          do (sock', sockAddr) <- accept sock
              WorkerThread _ chan <- getWorkerThread workerPoolMVar e
              writeChan chan sock'
              mainLoop sock workerPoolMVar e
@@ -98,7 +92,7 @@ workerLoop workerPoolMVar e chan
     = do mainLoop
     where
       mainLoop
-          = do debugM e "Wait for requests"
+          = do -- debugM e "Wait for requests"
                sock      <- readChan chan
                -- getClockTime >>= (\t -> debugM e $ "Received request @ " ++ (show $ toUTCTime t))
                handleRequest sock e
@@ -113,10 +107,9 @@ handleRequest sock e
                                          , receiveRequest sock
                                          , tryStaticContent 
                                          , addRoutesToEnvironment ]
-          debugM e $ "Handling Request : " ++ (URI.uriPath $ HTTP.rqURI $ getRequest e')
+          -- debugM e $ "Handling Request : " ++ (URI.uriPath $ HTTP.rqURI $ getRequest e')
           case (isResponseComplete e') of
-            True  -> do debugM e $ " tryStaticContent worked : " ++ (URI.uriPath $ HTTP.rqURI $ getRequest e') ++ " : " ++ show mytid
-                        sendResponse sock e'
+            True  -> sendResponse sock e'
             False -> do e'' <- requestHandler e'
                         sendResponse sock e''
       ) 
@@ -149,7 +142,7 @@ getWorkerThread mv e =
             putMVar mv $ WorkerPool (n+1) [] ((workerThread, expiresTime):bs)
             return workerThread
        WorkerPool n (idle:idles) busies ->
-         do debugM e ("Using existing worker thread (" ++ (show $ length ([idle] ++ idles )) ++ ", " ++ (show $ length busies) ++ ")")
+         do -- debugM e ("Using existing worker thread (" ++ (show $ length ([idle] ++ idles )) ++ ", " ++ (show $ length busies) ++ ")")
             expiresTime <- getCurrentTime >>= \utct -> return $ addUTCTime (fromInteger stdTimeOut) utct
             putMVar mv $ WorkerPool n idles ((idle, expiresTime):busies)
             return idle

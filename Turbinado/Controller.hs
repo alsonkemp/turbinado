@@ -4,6 +4,7 @@ module Turbinado.Controller (
         -- limited export from Turbinado.Controller.Monad
         Controller,
         runController,
+        get, put,
         -- * Functions
         doIO, catch,
 
@@ -11,6 +12,7 @@ module Turbinado.Controller (
         module Turbinado.Environment.CodeStore,
         module Turbinado.Environment.Request,
         module Turbinado.Environment.Response,
+        module Turbinado.Environment.Settings
         ) where
 
 import Control.Exception (catchDyn)
@@ -23,6 +25,7 @@ import Prelude hiding (catch)
 import Turbinado.Environment
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
+import Turbinado.Environment.Settings
 import Turbinado.Controller.Monad
 import Turbinado.Environment.CodeStore
 import Turbinado.Utility.General

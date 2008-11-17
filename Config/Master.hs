@@ -17,6 +17,8 @@ compileArgs =
         , "-fallow-undecidable-instances"
         , "-F", "-pgmFtrhsx"
         , "-fno-warn-overlapping-patterns" 
+        , "-odir " ++ compiledDir
+        , "-hidir " ++ compiledDir
         ] ++ (map ("-i"++) searchDirs)
 
 mUserPkgConf = [""]

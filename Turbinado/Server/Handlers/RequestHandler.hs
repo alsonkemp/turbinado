@@ -21,6 +21,7 @@ import qualified Network.HTTP as HTTP
 import Network.URI
 import Prelude hiding (catch)
 import System.Directory
+import System.FilePath
 import System.Plugins
 import Control.Monad
 import Data.Maybe
@@ -77,20 +78,22 @@ retrieveAndRunController e =
               debugM e $ " retrieveAndRunController : " ++ c ++ " : " ++ a
               p       <- retrieveCode e CTController (getController e)
               case p of
-                 CodeLoadController p' _ -> evalController p' e
-                 CodeLoadView       _  _ -> error "retrieveAndRunView called, but returned CodeLoadView"
-                 CodeLoadFailure         -> fileNotFoundResponse c e
+                 CodeLoadController p' _ _ -> evalController p' e
+                 CodeLoadView       _  _ _ -> error "retrieveAndRunView called, but returned CodeLoadView"
+                 CodeLoadFailure           -> fileNotFoundResponse c e
 
 retrieveAndRunLayout :: EnvironmentFilter
 retrieveAndRunLayout e =
-           do let l = fromJust $ getSetting "layout" e -- FIXME: handle the Maybe (!fromJust)
-              p    <- retrieveCode e CTLayout (getLayout e)
+           do let l = getLayout e -- FIXME: handle the Maybe (!fromJust)
+              p    <- case l of 
+                     ("", _) -> retrieveCode e CTView   (getView e)  -- If no Layout, then pull a View
+                     _       -> retrieveCode e CTLayout l
               case p of
-                 CodeLoadView       p' _ -> evalView p' e
-                 CodeLoadController _  _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                 CodeLoadFailure         -> fileNotFoundResponse l e
+                 CodeLoadView       p' _ _ -> evalView p' e
+                 CodeLoadController _  _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                 CodeLoadFailure           -> fileNotFoundResponse (joinPath [(fst l), (snd l)]) e
 
-          {-
+{-
 baseRequestHandler :: HTTP.Request -> CodeStore -> SessionStore -> IO HTTP.Response
 baseRequestHandler hreq pages sst = do
         debugM e "Done!"

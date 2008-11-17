@@ -5,6 +5,7 @@ module Turbinado.Environment.Settings (
         getSettings,
         setSettings,
         getController,
+        clearLayout,
         getLayout,
         getView
         )where
@@ -12,6 +13,7 @@ module Turbinado.Environment.Settings (
 import Data.Dynamic
 import qualified Data.Map as M
 import Control.Monad
+import Control.Monad.State
 import Data.Maybe
 import Data.Char
 import System.FilePath
@@ -53,6 +55,9 @@ getController :: Environment -> (FilePath, String)
 getController e = (             fromJust $ getSetting "controller" e,
                    actionName $ fromJust $ getSetting "action" e)
                     where actionName s = (toLower $ head s) : (tail s)
+
+clearLayout :: EnvironmentFilter
+clearLayout = setSetting "layout" ""
 
 getLayout :: Environment -> (FilePath, String)
 getLayout e = (fromJust $ getSetting "layout" e, "page")
