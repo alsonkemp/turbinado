@@ -12,7 +12,8 @@ import Control.Monad
 import qualified Network.HTTP as HTTP
 import qualified Network.URI as URI
 import Turbinado.Controller.Exception
-import Turbinado.Environment
+import Turbinado.Controller.Monad
+import Turbinado.Environment.Types
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Request
 import Turbinado.Environment.Settings
@@ -20,45 +21,31 @@ import qualified Turbinado.Environment.Settings as S
 
 import qualified Config.Routes
 
-type Keys = [String]
-data Routes = Routes [(Regex, Keys)]
-  deriving (Typeable)
-
-routesKey = "routes"
-
-addRoutesToEnvironment :: EnvironmentFilter
-addRoutesToEnvironment = setRoutes $ Routes $ parseRoutes Config.Routes.routes
-
-getRoutes :: Environment -> Routes
-getRoutes = getKey routesKey
-
-setRoutes :: Routes -> EnvironmentFilter
-setRoutes = setKey routesKey
+addRoutesToEnvironment :: Controller ()
+addRoutesToEnvironment = do e <- get
+                            put $ e {getRoutes = Just $ Routes $ parseRoutes Config.Routes.routes}
 
 
 ------------------------------------------------------------------------------
 -- Given an Environment
 ------------------------------------------------------------------------------
 
-runRoutes :: EnvironmentFilter
-runRoutes e = do debugM e $ "  Routes.runRoutes : starting"
-                 let Routes rs = getRoutes e
-                     r         = getRequest e
+runRoutes :: Controller ()
+runRoutes   = do debugM $ "  Routes.runRoutes : starting"
+                 e <- get
+                 let Routes rs = fromJust $ getRoutes e
+                     r         = fromJust $ getRequest e
                      p    = URI.uriPath $ HTTP.rqURI r
                      sets = msum $ map (\(r, k) -> maybe [] (zip k) (matchRegex r p)) rs
-                 debugM e $ "  Routes.runRoutes : checking sets"
                  case sets of
                   [] -> throwController $ ParameterLookupFailed $ "No routes matched for " ++ p
-                  _  -> do debugM e $ "  Routes.foldl"
-                           debugM e $ "  Routes : keys = " ++ (concat $ M.keys $ getSettings e)
-                           e' <- foldl (\m (k, v) -> m >>= setSetting k v) (return e) sets
-                           debugM e $ "  Routes : keys = " ++ (concat $ M.keys $ getSettings e')
-                           debugM e $ "  Routes.addDefaultAction"
-                           addDefaultAction e'
+                  _  -> do mapM (\(k, v) -> setSetting k v) sets
+                           addDefaultAction
 
-addDefaultAction :: EnvironmentFilter
-addDefaultAction e = do let s = getSettings e
-                        setSettings (M.insertWith (\ a b -> b) "action" (toDyn "Index") s) e
+addDefaultAction :: Controller ()
+addDefaultAction   = do e <- get
+                        let s = fromJust $ getSettings e
+                        put $ e {getSettings = Just (M.insertWith (\ a b -> b) "action" (toDyn "Index") s)}
 
 ------------------------------------------------------------------------------
 -- Generate the Routes from [String]

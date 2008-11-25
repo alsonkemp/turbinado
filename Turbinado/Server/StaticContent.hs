@@ -12,31 +12,33 @@ import Prelude hiding (catch)
 
 import Network.URI
 import Network.HTTP
+import Turbinado.Controller.Monad
 import Turbinado.Server.StandardResponse
 import Turbinado.Environment.MimeTypes
-import Turbinado.Environment
+import Turbinado.Environment.Types
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 
 import Config.Master
 
-tryStaticContent :: EnvironmentFilter
-tryStaticContent e = 
-  do cDir <- getCurrentDirectory
-     let mt      = getMimeTypes e
-         rq      = getRequest e
+tryStaticContent :: Controller ()
+tryStaticContent = 
+  do e <- get
+     cDir <- doIO $ getCurrentDirectory
+     let mt      = fromJust $ getMimeTypes e
+         rq      = fromJust $ getRequest e
          f       = drop 1 $ uriPath $ rqURI rq
          trydirs = case (length f) of
            0 -> map (\s -> joinPath $ map normalise [cDir, s, "index.html"]) staticDirs
            _ -> map (\s -> joinPath $ map normalise [cDir, s, f]) staticDirs
      -- debugM e $ "  tryStaticContent over " ++ (show trydirs)
-     foldl ( >>= ) (return e) $ map (tryToGetStaticContent mt) trydirs
+     sequence_ $ map (tryToGetStaticContent mt) trydirs
 
-tryToGetStaticContent :: MimeTypes -> FilePath  -> EnvironmentFilter
-tryToGetStaticContent mt p e = do exist <- doesFileExist p
-                                  case exist of
-                                    False -> return e
-                                    True -> do f <- readFile p
+tryToGetStaticContent :: MimeTypes -> FilePath -> Controller ()
+tryToGetStaticContent mt p = do exist <- doIO $ doesFileExist p
+                                case exist of
+                                    False -> return ()
+                                    True -> do f <- doIO $ readFile p
                                                let ct = maybe "text/html" (show) (mimeTypeOf mt p)
-                                               cachedContentResponse 600 ct f e
+                                               cachedContentResponse 600 ct f

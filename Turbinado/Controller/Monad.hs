@@ -2,6 +2,10 @@ module Turbinado.Controller.Monad (
         -- * The 'Controller' Monad
         Controller,
         runController,
+        withController,
+
+        get,
+        put,
         -- * Functions
         doIO, catch
         ) where
@@ -13,7 +17,7 @@ import Control.Monad.Trans (MonadIO(..))
 import Data.Maybe
 import Prelude hiding (catch)
 
-import Turbinado.Environment
+import Turbinado.Environment.Types
 import Turbinado.Controller.Exception
 import Turbinado.Utility.General
 
@@ -31,6 +35,9 @@ type Controller = StateT Environment IO
 -- the result of running it will be an IO computation.
 runController :: Controller () -> Environment -> IO Environment
 runController c e = (execStateT c) e
+
+withController :: (Environment -> Environment) -> Controller a -> Controller a
+withController = withStateT
 
 -- | Execute an IO computation within the Controller monad.
 doIO :: IO a -> Controller a
