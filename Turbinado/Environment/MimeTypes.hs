@@ -45,7 +45,7 @@ import Data.Typeable
 import qualified Data.Map as Map hiding (Map)
 import Text.ParserCombinators.Parsec
 
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 
 data MimeTypes = MimeTypes (Map String MimeType)
   deriving (Typeable)

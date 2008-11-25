@@ -12,7 +12,7 @@ import Control.Monad
 import qualified Network.HTTP as HTTP
 import qualified Network.URI as URI
 import Turbinado.Controller.Exception
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Request
 import Turbinado.Environment.Settings

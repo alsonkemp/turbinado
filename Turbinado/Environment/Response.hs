@@ -12,7 +12,7 @@ import Turbinado.Utility.General
 import qualified Data.Map as M
 import Control.Monad
 import Data.Maybe
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 import System.Time
 import System.Locale
 

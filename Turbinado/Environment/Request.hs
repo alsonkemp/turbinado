@@ -12,7 +12,7 @@ import Turbinado.Utility.General
 import qualified Data.Map as M
 import Control.Monad
 import Data.Maybe
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 
 requestKey = "request"
 
@@ -20,13 +20,11 @@ addRequestToEnvironment :: HTTP.Request -> EnvironmentFilter
 addRequestToEnvironment  = setRequest
 
 getRequest :: Environment -> HTTP.Request
-getRequest = getKey requestKey
+getRequest = fromJust $ request
 
 setRequest :: HTTP.Request -> EnvironmentFilter
-setRequest req = setKey requestKey req
+setRequest req e = return $ e { request = Just req} 
 
-modifyRequest :: (HTTP.Request -> HTTP.Request) -> EnvironmentFilter
-modifyRequest f = getRequest >>= (setRequest . f)
 
 {-
 lookupHeader :: (Monad m) => m (Maybe String)

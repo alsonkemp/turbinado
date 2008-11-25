@@ -17,7 +17,7 @@ import Control.Monad.State
 import Data.Maybe
 import Data.Char
 import System.FilePath
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 
 type Settings = M.Map String Dynamic
 

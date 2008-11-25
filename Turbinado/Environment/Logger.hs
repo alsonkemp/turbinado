@@ -3,7 +3,7 @@ module Turbinado.Environment.Logger where
 import qualified System.Log.Logger as L
 import qualified System.Log.Handler.Simple as S
 import Control.Concurrent.MVar
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 import Config.Master
 import Data.Dynamic
 

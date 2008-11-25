@@ -29,7 +29,7 @@ import Config.Master
 
 import qualified Turbinado.Server.Exception as Ex
 import Turbinado.Environment.Logger
-import Turbinado.Environment
+import {-# SOURCE #-} Turbinado.Environment
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 import Turbinado.View.Monad
