@@ -1,27 +1,37 @@
 module Turbinado.Environment.ViewData (
         addViewDataToEnvironment,
-        getViewData,
-        setViewData
+        getViewDataValue,
+        getViewDataValue_u,
+        setViewDataValue
         )where
 
 import qualified Data.Map as M
 import Control.Monad
+import Control.Monad.Trans
 import Data.Maybe
-import {-# SOURCE #-} Turbinado.Environment
+import Data.Typeable
+import Data.Dynamic
 
-type ViewData = Map String Dynamic
+import Turbinado.Environment.Types
+import Turbinado.Controller.Monad
+import Turbinado.View.Monad
 
+addViewDataToEnvironment :: Controller ()
+addViewDataToEnvironment  = do e <- get
+                               put $ e {getViewData = Just (M.empty :: ViewData)}
 
-viewDataKey = "viewdata"
+getViewDataValue :: (Typeable a) => String -> View (Maybe a)
+getViewDataValue k = do e <- lift get
+                        case (M.lookup k $ fromJust $ getViewData e) of
+                          Nothing -> return $ Nothing
+                          Just l  -> return $ fromDynamic l
 
-addViewDataToEnvironment :: EnvironmentFilter
-addViewDataToEnvironment  = setViewData (empty :: ViewData)
+getViewDataValue_u :: (Typeable a) => String -> View a
+getViewDataValue_u k = do v <- getViewDataValue k
+                          return $ fromJust v
 
-getViewData :: Environment -> ViewData
-getViewData = getKey viewDataKey
-
-setViewData :: ViewData -> EnvironmentFilter
-setViewData vd = setKey viewDataKey vd
-
-getViewDataValue :: (Typeable a) => String -> Environment -> a
-getViewDataValue s e = lookup (getViewData e) s
+setViewDataValue :: (Typeable a) => String -> a -> Controller ()
+setViewDataValue k v = do e <- get
+                          let vd  = fromJust $ getViewData e
+                              vd' = M.insert k (toDyn v) vd
+                          put $ e {getViewData = Just vd'}

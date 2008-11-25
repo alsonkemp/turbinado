@@ -29,7 +29,7 @@ import Data.List
 import Data.Dynamic
 
 import Config.Master
-import Turbinado.Environment
+import Turbinado.Environment.Types
 import Turbinado.Environment.CodeStore
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Request
@@ -41,69 +41,51 @@ import Turbinado.View
 import Turbinado.View.XML
 import Turbinado.Server.StandardResponse
 
-preFilters :: [EnvironmentFilter]
+preFilters :: [Controller ()]
 preFilters = [Routes.runRoutes ]
 
-postFilters :: [EnvironmentFilter]
+postFilters :: [Controller ()]
 postFilters = []
 
-requestHandler :: EnvironmentFilter
-requestHandler e = do
-          debugM e $ " requestHandler : running pre and main filters"
+requestHandler :: Environment -> IO Environment
+requestHandler e = runController requestHandler' e
+
+requestHandler' :: Controller ()
+requestHandler' = do
+          debugM $ " requestHandler : running pre and main filters"
           -- Run the Pre filters, the page
-          e' <- foldl ( chainer ) (return e) $ preFilters ++
-                                               customPreFilters ++
-                                               [ retrieveAndRunController
-                                               , retrieveAndRunLayout 
-                                               ] 
-          debugM e $ " requestHandler : running post filters"
-          foldl ( >>= ) (return e') (customPostFilters ++ postFilters)
+          sequence_ $ preFilters ++
+                      customPreFilters ++
+                      [ retrieveAndRunController
+                      , retrieveAndRunLayout 
+                      ] 
+          debugM $ " requestHandler : running post filters"
+          sequence_ (customPostFilters ++ postFilters)
 
 
--- chains EnvironmentFilters together, skipping the
--- remaining filters if the Response is complete
-chainer :: IO Environment -> EnvironmentFilter -> IO Environment
-chainer m f = do e <- m
-                 case isResponseComplete e of
-                   True -> return e
-                   False -> f e
-                   
-retrieveAndRunController :: EnvironmentFilter
-retrieveAndRunController e =
-           do debugM e $ " retrieveAndRunController : Starting"
-              debugM e $ " retrieveAndRunController : c = " ++ (show $ (getSetting "controller" e :: Maybe String))
-              debugM e $ " retrieveAndRunController : a = " ++ (show $ (getSetting "action" e :: Maybe String))
-              let c = fromJust $ getSetting "controller" e -- FIXME: handle the Maybe (!fromJust)
-                  a = fromJust $ getSetting "action" e
-              debugM e $ " retrieveAndRunController : " ++ c ++ " : " ++ a
-              p       <- retrieveCode e CTController (getController e)
+retrieveAndRunController :: Controller ()
+retrieveAndRunController =
+           do debugM $ " retrieveAndRunController : Starting"
+              c <- getSetting_u "controller"
+              a <- getSetting_u "action"
+              debugM $ " retrieveAndRunController : " ++ c ++ " : " ++ a
+              co <- getController
+              p  <- retrieveCode CTController co
               case p of
-                 CodeLoadController p' _ _ -> evalController p' e
+                 CodeLoadController p' _ _ -> p'
                  CodeLoadView       _  _ _ -> error "retrieveAndRunView called, but returned CodeLoadView"
-                 CodeLoadFailure           -> fileNotFoundResponse c e
+                 CodeLoadFailure           -> fileNotFoundResponse c
 
-retrieveAndRunLayout :: EnvironmentFilter
-retrieveAndRunLayout e =
-           do let l = getLayout e -- FIXME: handle the Maybe (!fromJust)
+retrieveAndRunLayout :: Controller ()
+retrieveAndRunLayout =
+           do l <- getLayout
               p    <- case l of 
-                     ("", _) -> retrieveCode e CTView   (getView e)  -- If no Layout, then pull a View
-                     _       -> retrieveCode e CTLayout l
+                     ("", _) -> do v <- getView
+                                   retrieveCode CTView v    -- If no Layout, then pull a View
+                     _       -> retrieveCode CTLayout l
               case p of
-                 CodeLoadView       p' _ _ -> evalView p' e
+                 CodeLoadView       p' _ _ -> evalView p'
                  CodeLoadController _  _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                 CodeLoadFailure           -> fileNotFoundResponse (joinPath [(fst l), (snd l)]) e
+                 CodeLoadFailure           -> fileNotFoundResponse (joinPath [(fst l), (snd l)])
 
-{-
-baseRequestHandler :: HTTP.Request -> CodeStore -> SessionStore -> IO HTTP.Response
-baseRequestHandler hreq pages sst = do
-        debugM e "Done!"
-        debugM e "Generating output ... "
-        hds  <- Response.getHeaders resp
-        let body = HSP.renderXML xml
-        debugM e "Done!"
-        where paths hreq = 
-                let u = HTTP.rqURI hreq
-                    p   =  uriPath u
-                    dirp = reverse $ dropWhile (/='/') $ reverse p
-                in (rootDir ++ p, rootDir ++ dirp)
--}
+

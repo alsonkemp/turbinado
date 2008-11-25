@@ -16,11 +16,11 @@ module Turbinado.View (
         module Turbinado.View.XML,
         module Turbinado.View.XML.PCDATA,
         module Turbinado.View.XMLGenerator,
-        module Turbinado.Environment,
         module Turbinado.Environment.CodeStore,
         module Turbinado.Environment.Request,
         module Turbinado.Environment.Response,
         module Turbinado.Environment.Settings,
+        module Turbinado.Environment.Types
         ) where
 
 import Control.Exception (catchDyn)
@@ -34,26 +34,26 @@ import qualified Network.URI  as URI
 import Prelude hiding (catch)
 import System.FilePath
 
-import Turbinado.Environment
+import Turbinado.Controller.Monad hiding (catch)
+import Turbinado.Environment.CodeStore
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 import Turbinado.Environment.Settings
+import Turbinado.Environment.Types
+import Turbinado.Server.StandardResponse
 import Turbinado.View.Exception
 import Turbinado.View.HTML
-import Turbinado.View.Monad
+import Turbinado.View.Monad hiding (doIO)
 import Turbinado.View.XML hiding (Name)
 import Turbinado.View.XML.PCDATA
 import Turbinado.View.XMLGenerator
-import Turbinado.Environment.CodeStore
 import Turbinado.Utility.General
 
 
-evalView :: View XML -> EnvironmentFilter
-evalView p e =
-           do (x, e') <- runView p e
-              case (HTTP.rspCode $ getResponse e') of
-                (0,0,0) -> setResponse ((getResponse e) {HTTP.rspCode = (2,0,0), HTTP.rspBody = renderAsHTML x}) e'
-                _       -> return e'
+evalView :: View XML -> Controller ()
+evalView p = do e <- get
+                (x, e') <- doIO $ runView p e
+                pageResponse [] $ renderAsHTML x
 
 defaultContentType :: String
 defaultContentType = "text/html; charset=ISO-8859-1"

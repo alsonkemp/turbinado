@@ -1,6 +1,4 @@
 module Turbinado.Controller (
-        getEnvironment,
-        evalController,
         -- limited export from Turbinado.Controller.Monad
         Controller,
         runController,
@@ -8,36 +6,72 @@ module Turbinado.Controller (
         -- * Functions
         doIO, catch,
 
-        module Turbinado.Environment,
+        redirectTo,
+        -- * Database
+        quickQuery,
+        quickQuery',
+        run,
+        HDBC.SqlValue(..),
+        HDBC.SqlType(..),
+
+        module Data.Maybe,
+
         module Turbinado.Environment.CodeStore,
+        module Turbinado.Environment.Logger,
         module Turbinado.Environment.Request,
         module Turbinado.Environment.Response,
-        module Turbinado.Environment.Settings
+        module Turbinado.Environment.Settings,
+        module Turbinado.Environment.Types,
+        module Turbinado.Environment.ViewData
         ) where
 
 import Control.Exception (catchDyn)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans (MonadIO(..))
+import Data.Maybe
 import qualified Network.HTTP as HTTP
 import Prelude hiding (catch)
+import qualified Database.HDBC as HDBC
 
-import Turbinado.Environment
+import Turbinado.Environment.Database
+import Turbinado.Environment.Logger
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 import Turbinado.Environment.Settings
+import Turbinado.Environment.Types
+import Turbinado.Environment.ViewData
 import Turbinado.Controller.Monad
 import Turbinado.Environment.CodeStore
 import Turbinado.Utility.General
+import Turbinado.Server.StandardResponse
 
-
-evalController :: Controller () -> EnvironmentFilter
-evalController p e = runController p e
-
+-- evalController :: Controller () -> Environment -> IO Environment
+-- evalController p = runController p e
 
 --
--- * Environment functions
+-- * Helper functions
 --
 
-getEnvironment :: Controller Environment
-getEnvironment = get
+redirectTo :: String -> Controller ()
+redirectTo l = redirectResponse l
+
+--
+-- * Database functions
+--
+
+quickQuery :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
+quickQuery s vs = do e <- get
+                     let c = fromJust $ getDatabase e
+                     doIO $ HDBC.handleSqlError $ HDBC.quickQuery c s vs
+
+quickQuery' :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
+quickQuery' s vs = do e <- get
+                      let c = fromJust $ getDatabase e
+                      doIO $ HDBC.handleSqlError $ HDBC.quickQuery' c s vs
+
+run :: String -> [HDBC.SqlValue] -> Controller Integer
+run s vs    = do e <- get
+                 let c = fromJust $ getDatabase e
+                 doIO $ HDBC.handleSqlError $  HDBC.run c s vs
+

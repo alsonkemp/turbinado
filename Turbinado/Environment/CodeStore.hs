@@ -1,16 +1,10 @@
 module Turbinado.Environment.CodeStore (
     addCodeStoreToEnvironment,
-    getCodeStore,
-    setCodeStore,
-    CodeType (..),
     retrieveCode,
-    CodeStore (..),
-    CodeMap,
-    CodeStatus (..)
     ) where
 
 import Control.Concurrent.MVar
-import Control.Exception ( catch, throwIO )
+import Control.Exception ( catch, throwIO)
 import Control.Monad ( when, foldM)
 import Data.Map hiding (map)
 import Data.List (isPrefixOf, intersperse)
@@ -20,7 +14,7 @@ import qualified Network.HTTP as HTTP
 import Prelude hiding (lookup,catch)
 import System.Directory
 import System.FilePath
-import System.IO 
+import System.IO
 import System.Plugins
 import System.Plugins.Utils
 import System.Time
@@ -29,140 +23,120 @@ import Config.Master
 
 import qualified Turbinado.Server.Exception as Ex
 import Turbinado.Environment.Logger
-import {-# SOURCE #-} Turbinado.Environment
+import Turbinado.Environment.Types
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
-import Turbinado.View.Monad
+import Turbinado.View.Monad hiding (doIO)
 import Turbinado.View.XML
 import Turbinado.Controller.Monad
 
-type CodeDate      = ClockTime
-type Function      = String
-type CodeLocation  = (FilePath, Function)
-
-data CodeStore  = CodeStore (MVar CodeMap)
-  deriving Typeable
-type CodeMap    = Map CodeLocation CodeStatus
-data CodeStatus = CodeLoadFailure | 
-                  CodeLoadController (Controller ()) Module CodeDate |
-                  CodeLoadView       (View XML     ) Module CodeDate
-
 -- | Create a new store for Code data
-addCodeStoreToEnvironment :: EnvironmentFilter
-addCodeStoreToEnvironment e = do mv <- newMVar $ empty
-                                 setCodeStore (CodeStore mv) e
+addCodeStoreToEnvironment :: Controller ()
+addCodeStoreToEnvironment = do e <- get
+                               mv <- doIO $ newMVar $ empty
+                               put $ e {getCodeStore = Just $ CodeStore mv}
 
-codeStoreKey = "codestore"
-
-getCodeStore :: Environment -> CodeStore
-getCodeStore = getKey codeStoreKey
-
-setCodeStore :: CodeStore -> EnvironmentFilter
-setCodeStore req = setKey codeStoreKey req
-
-
-data CodeType = CTView | CTController | CTLayout
-
-retrieveCode :: Environment -> CodeType -> CodeLocation -> IO CodeStatus
-retrieveCode e ct cl' = do
-    let (CodeStore mv) = getCodeStore e
+retrieveCode :: CodeType -> CodeLocation -> Controller CodeStatus
+retrieveCode ct cl' = do
+    e <- get
+    let (CodeStore mv) = fromJust $ getCodeStore e
         path  = getDir ct
     cl <- do -- d <- getCurrentDirectory 
              return (addExtension (joinPath $ map normalise [{- d, -} path, dropExtension $ fst cl']) "hs", snd cl')
-    debugM e $ "  CodeStore : retrieveCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
-    cmap <- takeMVar mv
+    debugM $ "  CodeStore : retrieveCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
+    cmap <- doIO $ takeMVar mv
     let c= lookup cl cmap
     cmap' <- case c of
-               Nothing              -> do debugM e ((fst cl) ++ " : " ++ (snd cl) ++ " : fresh load")
-                                          loadCode e ct cmap cl
-               Just CodeLoadFailure -> do debugM e ((fst cl) ++ " : " ++ (snd cl) ++ " : previous failure; try load") 
-                                          loadCode e ct cmap cl
-               _                    -> do debugM e ((fst cl) ++ " : " ++ (snd cl) ++ " : checking reload") 
-                                          checkReloadCode e ct cmap (fromJust c) cl
-    putMVar mv cmap'
+               Nothing              -> do debugM ((fst cl) ++ " : " ++ (snd cl) ++ " : fresh load")
+                                          loadCode ct cmap cl
+               Just CodeLoadFailure -> do debugM ((fst cl) ++ " : " ++ (snd cl) ++ " : previous failure; try load") 
+                                          loadCode ct cmap cl
+               _                    -> do debugM ((fst cl) ++ " : " ++ (snd cl) ++ " : checking reload") 
+                                          checkReloadCode ct cmap (fromJust c) cl
+    doIO $ putMVar mv cmap'
     -- We _definitely_ have a code entry now, though it may have a MakeFailure
     let c' = lookup cl cmap'
     case c' of
-        Nothing                           -> do debugM e (fst cl ++ " : Not found in CodeStore") 
+        Nothing                           -> do debugM (fst cl ++ " : Not found in CodeStore") 
                                                 return CodeLoadFailure
-        Just CodeLoadFailure              -> do debugM e (fst cl ++ " : CodeLoadFailure " ) 
+        Just CodeLoadFailure              -> do debugM (fst cl ++ " : CodeLoadFailure " ) 
                                                 return CodeLoadFailure
-        Just clc@(CodeLoadController _ _ _) -> do debugM e (fst cl ++ " : CodeLoadController " ) 
+        Just clc@(CodeLoadController _ _ _) -> do debugM (fst cl ++ " : CodeLoadController " ) 
                                                   return clc  
-        Just clv@(CodeLoadView       _ _ _) -> do debugM e (fst cl ++ " : CodeLoadView" ) 
+        Just clv@(CodeLoadView       _ _ _) -> do debugM (fst cl ++ " : CodeLoadView" ) 
                                                   return clv
         
-checkReloadCode :: Environment -> CodeType -> CodeMap -> CodeStatus -> CodeLocation -> IO CodeMap
-checkReloadCode e ct cmap CodeLoadFailure cl = error "ERROR: checkReloadCode was called with a CodeLoadFailure"
-checkReloadCode e ct cmap cstat cl = do
-    debugM e $ "    CodeStore : checkReloadCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
-    r <- needReloadCode e (fst cl) (getDate cstat)
+checkReloadCode :: CodeType -> CodeMap -> CodeStatus -> CodeLocation -> Controller CodeMap
+checkReloadCode ct cmap CodeLoadFailure cl = error "ERROR: checkReloadCode was called with a CodeLoadFailure"
+checkReloadCode ct cmap cstat cl = do
+    debugM $ "    CodeStore : checkReloadCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
+    r <- needReloadCode (fst cl) (getDate cstat)
     case r of
-        False -> do debugM e $ "    CodeStore : checkReloadCode : No reload neeeded"
+        False -> do debugM $ "    CodeStore : checkReloadCode : No reload neeeded"
                     return cmap
-        True  -> do debugM e $ "    CodeStore : checkReloadCode : Need reload"
-                    loadCode e ct cmap cl
+        True  -> do debugM $ "    CodeStore : checkReloadCode : Need reload"
+                    loadCode ct cmap cl
 
         
 -- The beast
 -- In cases of Merge, Make or Load failures leave the original files in place and log the error
-loadCode :: Environment -> CodeType -> CodeMap -> CodeLocation -> IO CodeMap
-loadCode e ct cmap cl = do
-    debugM e $ "\tCodeStore : loadCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
-    fe <- doesFileExist $ fst cl
+loadCode :: CodeType -> CodeMap -> CodeLocation -> Controller CodeMap
+loadCode ct cmap cl = do
+    debugM $ "\tCodeStore : loadCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
+    fe <- doIO $ doesFileExist $ fst cl
     case fe of 
-        False -> debugM e ("\tFile not found: " ++ fst cl) >> return cmap 
-        True  -> mergeCode e ct cmap cl
+        False -> debugM ("\tFile not found: " ++ fst cl) >> return cmap 
+        True  -> mergeCode ct cmap cl
         
-mergeCode :: Environment -> CodeType -> CodeMap -> CodeLocation -> IO CodeMap
-mergeCode e ct cmap cl = do
-    debugM e $ "\tMerging " ++ (fst cl)
+mergeCode :: CodeType -> CodeMap -> CodeLocation -> Controller CodeMap
+mergeCode ct cmap cl = do
+    debugM $ "\tMerging " ++ (fst cl)
     -- d <- getCurrentDirectory
-    --debugM e $ "  stub " ++ joinPath [normalise d, normalise $ getStub ct]
+    --debugM $ "  stub " ++ joinPath [normalise d, normalise $ getStub ct]
     ms <- customMergeToDir (joinPath [{-normalise d,-} normalise $ getStub ct]) (fst cl) compiledDir
     case ms of
-        MergeFailure err            -> do debugM e ("\tMerge error : " ++ (show err))
+        MergeFailure err            -> do debugM ("\tMerge error : " ++ (show err))
                                           return $ insert cl CodeLoadFailure cmap
-        MergeSuccess NotReq _    _  -> do debugM e ("\tMerge success (No recompilation required) : " ++ (fst cl)) 
+        MergeSuccess NotReq _    _  -> do debugM ("\tMerge success (No recompilation required) : " ++ (fst cl)) 
                                           return cmap
-        MergeSuccess _      args fp -> do debugM e ("\tMerge success : " ++ (fst cl)) 
-                                          makeCode e ct cmap cl args fp
+        MergeSuccess _      args fp -> do debugM ("\tMerge success : " ++ (fst cl)) 
+                                          makeCode ct cmap cl args fp
         
-makeCode :: Environment -> CodeType -> CodeMap -> CodeLocation -> [Arg] -> FilePath -> IO CodeMap
-makeCode e ct cmap cl args fp = do
-    ms <- makeAll fp (compileArgs++args)
+makeCode :: CodeType -> CodeMap -> CodeLocation -> [Arg] -> FilePath -> Controller CodeMap
+makeCode ct cmap cl args fp = do
+    ms <- doIO $ makeAll fp (compileArgs++args)
     case ms of
-        MakeFailure err       -> do debugM e ("\tMake error : " ++ (show err)) 
+        MakeFailure err       -> do debugM ("\tMake error : " ++ (show err)) 
                                     return (insert cl CodeLoadFailure cmap)
-        MakeSuccess NotReq _  -> do debugM e ("\tMake success : No recomp required") 
+        MakeSuccess NotReq _  -> do debugM ("\tMake success : No recomp required") 
                                     return (insert cl CodeLoadFailure cmap)
-        MakeSuccess _      fp -> do debugM e ("\tMake success : " ++ fp)
+        MakeSuccess _      fp -> do debugM ("\tMake success : " ++ fp)
                                     case ct of
-                                      CTController -> _loadController e ct cmap cl fp
-                                      _            -> _loadView       e ct cmap cl fp
+                                      CTController -> _loadController ct cmap cl fp
+                                      _            -> _loadView       ct cmap cl fp
 
-_loadController :: Environment -> CodeType -> CodeMap -> CodeLocation -> FilePath -> IO CodeMap
-_loadController e ct cmap cl fp = do
-    debugM e ("loadController : " ++ (fst cl) ++ " : " ++ (snd cl))
-    ls <- load_ fp [compiledDir] (snd cl)
+_loadController :: CodeType -> CodeMap -> CodeLocation -> FilePath -> Controller CodeMap
+_loadController ct cmap cl fp = do
+    debugM ("loadController : " ++ (fst cl) ++ " : " ++ (snd cl))
+    ls <- doIO $ load_ fp [compiledDir] (snd cl)
     case ls of 
-        LoadFailure err -> do debugM e ("LoadFailure : " ++ (show err)) 
+        LoadFailure err -> do debugM ("LoadFailure : " ++ (show err)) 
                               return (insert cl CodeLoadFailure cmap)
-        LoadSuccess m f -> do debugM e ("LoadSuccess : " ++ fst cl )
-                              unload m
-                              t <- getClockTime
+        LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
+                              doIO $ unload m
+                              t <- doIO $ getClockTime
                               return (insert cl (CodeLoadController f m t) cmap)
 
-_loadView :: Environment -> CodeType -> CodeMap -> CodeLocation -> FilePath -> IO CodeMap
-_loadView e ct cmap cl fp = do
-    debugM e ("loadView : " ++ (fst cl) ++ " : " ++ (snd cl))
-    ls <- load_ fp (compiledDir:searchDirs) (snd cl)
+_loadView :: CodeType -> CodeMap -> CodeLocation -> FilePath -> Controller CodeMap
+_loadView ct cmap cl fp = do
+    debugM ("loadView : " ++ (fst cl) ++ " : " ++ (snd cl))
+    ls <- doIO $ load_ fp (compiledDir:searchDirs) (snd cl)
     case ls of 
-        LoadFailure err -> do debugM e ("\tLoadFailure : " ++ (show err)) 
+        LoadFailure err -> do debugM ("\tLoadFailure : " ++ (show err)) 
                               return (insert cl CodeLoadFailure cmap)
-        LoadSuccess m f -> do debugM e ("\tLoadSuccess : " ++ fst cl )
-                              unload m
-                              t <- getClockTime
+        LoadSuccess m f -> do debugM ("\tLoadSuccess : " ++ fst cl )
+                              doIO $ unload m
+                              t <- doIO $ getClockTime
                               return (insert cl (CodeLoadView  f m t) cmap)
 
 
@@ -172,10 +146,10 @@ _loadView e ct cmap cl fp = do
 
 -- Custom merge function because I don't want to have to use a custom
 -- version of Plugins (with HSX enabled)
-customMergeToDir :: FilePath -> FilePath -> FilePath -> IO MergeStatus
+customMergeToDir :: FilePath -> FilePath -> FilePath -> Controller MergeStatus
 customMergeToDir stb src dir = do
-    src_exists <- doesFileExist src
-    stb_exists <- doesFileExist stb
+    src_exists <- doIO $ doesFileExist src
+    stb_exists <- doIO $ doesFileExist stb
     let outFile = joinPath [dir, src]
         outDir  = joinPath $ init $ splitDirectories outFile
         outMod  = concat $ intersperse "." $ splitDirectories $ dropExtension src
@@ -186,22 +160,22 @@ customMergeToDir stb src dir = do
         (_, False) -> return $ 
                 MergeFailure ["Source file does not exist : "++stb]
         _          -> do
-                src_str <- readFile src
-                stb_str <- readFile stb
+                src_str <- doIO $ readFile src
+                stb_str <- doIO $ readFile stb
                 let (stbimps, stbdecls) = span ( not . isPrefixOf "-- SPLIT HERE") $ lines stb_str
                     mrg_str = outTitle ++ (unlines stbimps) ++ src_str ++ (unlines stbdecls)
-                createDirectoryIfMissing True outDir
-                hdl <- openFile outFile WriteMode  -- overwrite!
-                hPutStr hdl mrg_str 
-                hClose hdl
+                doIO $ createDirectoryIfMissing True outDir
+                hdl <- doIO $ openFile outFile WriteMode  -- overwrite!
+                doIO $ hPutStr hdl mrg_str 
+                doIO $ hClose hdl
                 return $ MergeSuccess ReComp [] outFile -- must have recreated file
  
 
-needReloadCode :: Environment -> FilePath -> CodeDate -> IO Bool
-needReloadCode e fp fd = do
-    fe <- doesFileExist fp
+needReloadCode :: FilePath -> CodeDate -> Controller Bool
+needReloadCode fp fd = do
+    fe <- doIO $ doesFileExist fp
     case fe of
-        True -> do mt <- getModificationTime fp    
+        True -> do mt <- doIO $ getModificationTime fp    
                    return $ mt > fd
         False-> return True
 

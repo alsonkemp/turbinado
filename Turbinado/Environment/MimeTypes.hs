@@ -32,8 +32,6 @@
 -- -----------------------------------------------------------------------------
 
 module Turbinado.Environment.MimeTypes (
-    MimeTypes (..),
-    getMimeTypes,
     setMimeTypes,
     mimeTypeOf,
     addMimeTypesToEnvironment
@@ -44,23 +42,19 @@ import Data.Map (Map)
 import Data.Typeable
 import qualified Data.Map as Map hiding (Map)
 import Text.ParserCombinators.Parsec
+import Control.Monad.State
+import Control.Monad.Trans
 
-import {-# SOURCE #-} Turbinado.Environment
+import Turbinado.Environment.Types
 
-data MimeTypes = MimeTypes (Map String MimeType)
-  deriving (Typeable)
-data MimeType = MimeType String String
+setMimeTypes :: MonadState Environment (mt Environment IO) => MimeTypes -> mt Environment IO ()
+setMimeTypes mi = do e <- get
+                     put $ e {getMimeTypes = Just mi}
 
-instance Show MimeType where
-   showsPrec _ (MimeType part1 part2) = showString (part1 ++ '/':part2)
-
-mimeTypesKey = "mimetypes"
-
-getMimeTypes :: Environment -> MimeTypes
-getMimeTypes = getKey mimeTypesKey
-
-setMimeTypes :: MimeTypes -> EnvironmentFilter
-setMimeTypes  = setKey mimeTypesKey
+addMimeTypesToEnvironment :: (MonadState Environment (mt Environment IO), MonadIO (mt Environment IO)) => FilePath -> mt Environment IO ()
+addMimeTypesToEnvironment mime_types_file =
+    do stuff <- liftIO $ readFile mime_types_file
+       setMimeTypes (MimeTypes $ Map.fromList (parseMimeTypes stuff))
 
 
 mimeTypeOf :: MimeTypes -> FilePath -> Maybe MimeType
@@ -75,11 +69,6 @@ extension fn = go (reverse fn) ""
   where go []      _   = ""
         go ('.':_) ext = ext
         go (x:s)   ext = go s (x:ext)
-
-addMimeTypesToEnvironment :: FilePath -> EnvironmentFilter
-addMimeTypesToEnvironment mime_types_file e =
-    do stuff <- readFile mime_types_file
-       setMimeTypes (MimeTypes $ Map.fromList (parseMimeTypes stuff)) e
 
 parseMimeTypes :: String -> [(String,MimeType)]
 parseMimeTypes file =

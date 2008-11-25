@@ -9,8 +9,6 @@ performance :: Controller ()
 performance = return ()
 
 hello :: Controller ()
-hello = do e  <- getEnvironment
-           e' <- doIO $ clearLayout e
-           put e'
+hello = clearLayout
 
 

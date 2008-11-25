@@ -3,34 +3,35 @@ module Turbinado.Environment.Logger where
 import qualified System.Log.Logger as L
 import qualified System.Log.Handler.Simple as S
 import Control.Concurrent.MVar
-import {-# SOURCE #-} Turbinado.Environment
+import Control.Monad.State
+import Control.Monad.Trans
+import Turbinado.Environment.Types
 import Config.Master
 import Data.Dynamic
+import Data.Maybe
+import System.IO.Unsafe
 
-addLoggerToEnvironment :: EnvironmentFilter
-addLoggerToEnvironment e = do f <- S.fileHandler "log" logLevel
-                              L.updateGlobalLogger "Turbinado" ( L.setLevel logLevel . L.setHandlers [f])
-                              mv <- newMVar ()
-                              setLoggerLock mv e
+import Turbinado.Controller.Monad
 
-loggerKey = "logger"
+addLoggerToEnvironment :: Controller ()
+addLoggerToEnvironment = do e <- get
+                            f <- doIO $ S.fileHandler "log" logLevel
+                            doIO $ L.updateGlobalLogger "Turbinado" ( L.setLevel logLevel . L.setHandlers [f])
+                            mv <- doIO $ newMVar ()
+                            put $ e {getLoggerLock = Just mv}
 
-getLoggerLock :: Environment -> MVar ()
-getLoggerLock = getKey loggerKey
+takeLoggerLock :: Controller ()
+takeLoggerLock = do e <- get
+                    doIO $ takeMVar (fromJust $ getLoggerLock e)
 
-setLoggerLock :: MVar () -> EnvironmentFilter
-setLoggerLock l = setKey loggerKey l
+putLoggerLock  :: Controller ()
+putLoggerLock =  do e <- get
+                    doIO $ putMVar (fromJust $ getLoggerLock e) ()
 
-takeLoggerLock :: Environment -> IO ()
-takeLoggerLock e = takeMVar (getLoggerLock e)
-
-putLoggerLock :: Environment -> IO ()
-putLoggerLock e =  putMVar (getLoggerLock e) ()
-
-wrapLoggerLock :: (String -> IO ()) -> Environment -> String -> IO ()
-wrapLoggerLock lf e s = do takeLoggerLock e
-                           lf s
-                           putLoggerLock e
+wrapLoggerLock :: (String -> IO ()) -> String -> Controller ()
+wrapLoggerLock lf s = do takeLoggerLock
+                         doIO $ lf s
+                         putLoggerLock
 
 debugM        = wrapLoggerLock (L.logM "Turbinado" L.DEBUG)
 infoM         = wrapLoggerLock (L.logM "Turbinado" L.INFO)
