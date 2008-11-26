@@ -39,5 +39,5 @@ googleAnalytics g = return $ cdata $
                     "</script> " ++
                     "<script type=\"text/javascript\"> " ++
                     "  var pageTracker = _gat._getTracker(\"" ++ g ++ "\"); " ++
-                    "  pageTracker._trackViewview(); " ++
+                    "  pageTracker._trackPageview(); " ++
                     "</script> "

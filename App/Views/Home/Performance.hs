@@ -23,18 +23,19 @@ page =      <div>
                 Transfer rate:          104.85 [Kbytes/sec] received
               </pre>
               <h2>Ruby On Rails - Dynamic Content - Mongrel</h2>
+              <p>Corrected as per GitHub message from <a href="http://github.com/lifo">lifo</a>.</p>
               <pre>
                 Concurrency Level:      10
-                Time taken for tests:   45.35484 seconds
+                Time taken for tests:   5.956132 seconds
                 Complete requests:      1000
                 Failed requests:        0
                 Write errors:           0
                 Total transferred:      470000 bytes
                 HTML transferred:       12000 bytes
-                Requests per second:    22.05 [#/sec] (mean)
-                Time per request:       453.548 [ms] (mean)
-                Time per request:       45.355 [ms] (mean, across all concurrent requests)
-                Transfer rate:          9.92 [Kbytes/sec] received
+                Requests per second:    167.89 [#/sec] (mean)
+                Time per request:       59.561 [ms] (mean)
+                Time per request:       5.956 [ms] (mean, across all concurrent requests)
+                Transfer rate:          76.90 [Kbytes/sec] received
               </pre>
              
               <h1>Static Content</h1>
