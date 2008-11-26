@@ -1,46 +1,58 @@
+import Control.Monad.Trans
+import Data.List
+import Data.Maybe
+import qualified Network.HTTP as HTTP
+import qualified Network.URI  as URI
+
 page :: View XML
 page = <html>
          <head>
            <% styleSheet "normalize" "screen" %>
-           <% styleSheet "jsddm" "screen" %>
+           <% styleSheet "pressurized" "screen" %>
            <% styleSheet "turbinado" "screen" %>
            <% javaScript "jquery" %>
            <% javaScript "jsddm" %>
            <% googleAnalytics "UA-6158816-1" %>
          </head>
          <body>
-           <table class="wrapper">
-             <tr>
-               <td class="title">
-                 <h1>Turbinado</h1>
-                 <img class="title-image" src="/images/turbinado.jpg" />
-                 <h2>Sugar For</h2>
-                 <h2>The Web</h2>
-               </td>
-               <td class="container">
-                 <ul id="jsddm">
-                   <li><a href="/Home/Index">Home</a>
-                     <ul>
-                       <li><a href="/Home/About">About</a></li>
-                       <li><a href="/Home/Performance">Performance</a></li>
-                     </ul>
-                   </li>
-                   <li><a href="/Tutorial/Index">Tutorial</a>
-                   </li>
-                   <li><a href="/Develop/Index">Develop</a></li>
-                 </ul>
-                 <div class="clear"></div>
-                 <% breadCrumbs %>
-                 <div id="content-block" class="content-block">
-                   <% insertView %>
-                 </div>
-               </td>
-             </tr>
-             <tr>
-               <td colspan="2">
-                 <div class="footer">Turbinado - www.turbinado.org</div>
-               </td>
-             </tr>
-           </table>
+           <div id="wrapper">
+             <div id="header">
+               <div id="logo">
+                 <h1>
+                   <a href="http://www.turbinado.org">
+                     <img src="/images/turbinado.jpg" />
+                     <span style="left:140px; position:absolute; top:65px;">
+                       Turbinado
+                     </span>
+                   </a>
+                 </h1>
+               </div>
+             </div>
+             <div id="menu">
+               <ul>
+                 <% menuItem "/Home/Index"       "Home" %>
+                 <% menuItem "/Home/About"       "About" %>
+                 <% menuItem "/Home/Performance" "Performance" %>
+                 <% menuItem "/Tutorial/Index"   "Tutorial" %>
+                 <% menuItem "/Develop/Index"    "Develop" %>
+               </ul>
+             </div>
+             <div id="page">
+               <div id="content">
+                 <% insertView %>
+               </div>
+             </div>
+             <div style="clear: both;" />
+           </div>
+           <div id="footer">
+             <p>Copyright (c) 2008 Turbinado.org. All rights reserved.</p>
+             <p>Design by <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
+           </div>
          </body>
        </html>
+
+menuItem :: FilePath -> String -> View XML
+menuItem p t = do e <- getEnvironment
+                  let ru = HTTP.rqURI $ fromJust $ getRequest e
+                      active = if isPrefixOf p (URI.uriPath ru) then "active" else ""
+                  <li class=active><a href=p><%t%></a></li>
