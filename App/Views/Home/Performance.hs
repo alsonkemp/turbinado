@@ -11,16 +11,16 @@ page =      <div>
               <h2>Turbinado - (Simple) Dynamic Content - LogLevel ERROR</h2>
               <pre>
                 Concurrency Level:      10
-                Time taken for tests:   1.316121 seconds
+                Time taken for tests:   0.9153653 seconds
                 Complete requests:      1000
                 Failed requests:        0
                 Write errors:           0
-                Total transferred:      142000 bytes
+                Total transferred:      164000 bytes
                 HTML transferred:       11000 bytes
-                Requests per second:    759.81 [#/sec] (mean)
-                Time per request:       13.161 [ms] (mean)
-                Time per request:       1.316 [ms] (mean, across all concurrent requests)
-                Transfer rate:          104.85 [Kbytes/sec] received
+                Requests per second:    1092.46 [#/sec] (mean)
+                Time per request:       9.154 [ms] (mean)
+                Time per request:       0.915 [ms] (mean, across all concurrent requests)
+                Transfer rate:          174.90 [Kbytes/sec] received
               </pre>
               <h2>Ruby On Rails - Dynamic Content - Mongrel</h2>
               <pre>

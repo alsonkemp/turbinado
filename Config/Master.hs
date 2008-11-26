@@ -19,6 +19,7 @@ compileArgs =
         , "-fno-warn-overlapping-patterns" 
         , "-odir " ++ compiledDir
         , "-hidir " ++ compiledDir
+        , "-package HDBC"
         ] ++ (map ("-i"++) searchDirs)
 
 mUserPkgConf = [""]
