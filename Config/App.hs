@@ -28,7 +28,7 @@ newAppEnvironment = AppEnvironment
 -- Database connection
 ----------------------------------------------------------------
 databaseConnection :: Maybe (IO Connection)
-databaseConnection = Just $ connectPostgreSQL "host=localhost dbname=turbinado user=turbinado password=turbinado"
+databaseConnection = Nothing
 
 
 ----------------------------------------------------------------
@@ -41,6 +41,6 @@ customPostFilters = []
 ----------------------------------------------------------------
 -- Logging
 ----------------------------------------------------------------
-logLevel = DEBUG -- DEBUG < INFO < NOTICE < WARNING < ERROR < CRITICAL < ALERT < EMERGENCY 
+logLevel = ERROR -- DEBUG < INFO < NOTICE < WARNING < ERROR < CRITICAL < ALERT < EMERGENCY 
 
 
