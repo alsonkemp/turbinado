@@ -13,44 +13,74 @@
 -----------------------------------------------------------------------------
 module Turbinado.Server.StandardResponse where
 
+import Data.List
 import Network.HTTP
 import Network.HTTP.Headers
-import Turbinado.Environment
+import System.Locale
+import System.Time
+
+import Turbinado.Environment.Types
 import Turbinado.Environment.Response
+import Turbinado.Controller.Monad
 
 -- import HSP.Data
+instance Eq Header where
+  (==) (Header hn1 _) (Header hn2 _) = hn1 == hn2
 
-fileNotFoundResponse :: FilePath -> EnvironmentFilter
-fileNotFoundResponse fp =
-        setResponse (Response (4,0,0) "File Not Found" (contentHds $ length body) (body))
+fileNotFoundResponse :: FilePath -> Controller ()
+fileNotFoundResponse fp = 
+     do t <- doIO $ getClockTime
+        setResponse (Response (4,0,0) 
+                     "File Not Found" 
+                     (buildHeaders (Just $ length body) t []) 
+                     (body))
   where body = "<html><body>\n <p><big>404 File Not Found</big></p>\n <p>Requested resource: "++ fp ++ "</p>\n </body></html>"
 
-cachedContentResponse :: Int -> String -> String -> EnvironmentFilter
+cachedContentResponse :: Int -> String -> String -> Controller ()
 cachedContentResponse age ct body =
-      pageResponse [ Header HdrCacheControl $ "max-age=" ++ (show age) ++ ", public"
-                   , Header HdrContentType ct] body
+     do t <- doIO $ getClockTime
+        pageResponse (buildHeaders 
+                        Nothing t
+                        [Header HdrCacheControl $ "max-age=" ++ (show age) ++ ", public"
+                        , Header HdrContentType ct])
+                     body
 
-pageResponse :: [Header] -> String -> EnvironmentFilter
+pageResponse :: [Header] -> String -> Controller ()
 pageResponse hds body =
+     do t <- doIO $ getClockTime
         setResponse (Response stSuccess "OK" 
-        	(contentHds (length body) ++ hds) (body))
+        	(buildHeaders (Just $ length body) t hds) (body))
 
-errorResponse :: String -> EnvironmentFilter
+redirectResponse :: String -> Controller ()
+redirectResponse l =
+     do t <- doIO $ getClockTime
+        setResponse (Response (3,0,2) "OK" (buildHeaders Nothing t [Header HdrLocation l]) "")
+
+errorResponse :: String -> Controller ()
 errorResponse err = 
+     do t <- doIO $ getClockTime
         setResponse (Response stError "Internal Server Error"
-         	(contentHds $ length body) (body))
+         	(buildHeaders (Just $ length body) t []) (body))
   where body = "<html><body>\n <p><big>500 Internal Server Error</big></p>\n <p>Error specification:<br/>\n" ++ err ++ "</p>\n </body></html>"
 
-badReqResponse :: EnvironmentFilter
+badReqResponse :: Controller ()
 badReqResponse =
+     do t <- doIO $ getClockTime
         setResponse (Response stBadReq "Bad Request"
-        	(contentHds $ length body) (body))
+        	(buildHeaders (Just $ length body) t []) body)
   where body = "<html><body>\n  <p><big>400 Bad Request</big></p>\n  </body></html>"
 
 
-contentHds :: Int -> [Header]
-contentHds l = [Header HdrContentType"text/html",
-                Header HdrContentLength $ show l]
+buildHeaders :: Maybe Int -> ClockTime -> [Header] -> [Header]
+buildHeaders Nothing  t hdrs = union hdrs ( startingHeaders t)
+buildHeaders (Just l) t hdrs = union hdrs ((startingHeaders t) ++
+                                [Header HdrContentLength $ show l]) 
+                                
+
+startingHeaders t = [ Header HdrServer "Turbinado www.turbinado.org"
+                    , Header HdrContentType "text/html; charset=UTF-8"
+                    , Header HdrDate $ formatCalendarTime defaultTimeLocale rfc822DateFormat $ toUTCTime t
+                    ]
 
 stSuccess, stFNF :: ResponseCode
 stSuccess = (2,0,0)

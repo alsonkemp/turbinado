@@ -1,5 +1,4 @@
 h1 {
-  padding-top: 10px;
   font-weight: bold;
   font-size: 16px;
 }
@@ -45,11 +44,6 @@ div.content-block {
   min-height: 500px;
 }
 
-body {
-  margin: 20px 0;
-  font-family: Tahoma, sans-serif;
-  background-color: #D4E0F2;
-}
 
 .title {
   text-align: center;

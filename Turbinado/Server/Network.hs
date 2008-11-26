@@ -3,23 +3,26 @@ module Turbinado.Server.Network (
         , sendResponse		-- :: Handle -> Response -> IO ()
         ) where
 
+import Data.Maybe
 import Network.Socket
 
+import Turbinado.Controller.Monad
 import Turbinado.Server.Exception
 import Turbinado.Environment.Logger
-import Turbinado.Environment
+import Turbinado.Environment.Types
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 
 import Network.HTTP
 
 
-receiveRequest :: Socket -> EnvironmentFilter
-receiveRequest sock e = do
-        req <-receiveHTTP sock
+receiveRequest :: Socket -> Controller ()
+receiveRequest sock = do
+        req <- doIO $ receiveHTTP sock
         case req of
          Left _ -> throwTurbinado $ BadRequest "Looks as though we've got a bad request, sir"
-         Right r  -> setRequest r e
+         Right r  -> do e <- get
+                        put $ e {getRequest = Just r}
 
 sendResponse :: Socket -> Environment -> IO ()
-sendResponse sock e = respondHTTP sock $ getResponse e
+sendResponse sock e = respondHTTP sock $ fromJust $ getResponse e

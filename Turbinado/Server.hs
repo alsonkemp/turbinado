@@ -21,12 +21,17 @@ import qualified Network.URI as URI
 
 import Config.Master
 
-import Turbinado.Environment
+import Turbinado.Controller.Monad hiding (catch)
+import Turbinado.Environment.Database
+import Turbinado.Environment.Logger
+import Turbinado.Environment.MimeTypes
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 import Turbinado.Environment.Routes
 import Turbinado.Environment.Settings
-import Turbinado.Environment.CodeStore (addCodeStoreToEnvironment, CodeStore)
+import Turbinado.Environment.Types
+import Turbinado.Environment.ViewData
+import Turbinado.Environment.CodeStore (addCodeStoreToEnvironment)
 import Turbinado.Server.Exception
 import Turbinado.Server.Handlers.ErrorHandler (handleError, handleTurbinado)
 import Turbinado.Server.Handlers.RequestHandler (requestHandler)
@@ -34,8 +39,6 @@ import Turbinado.Server.Handlers.SessionHandler
 import Turbinado.Server.Network (receiveRequest, sendResponse)
 import Turbinado.Server.StandardResponse (pageResponse)
 import Turbinado.Server.StaticContent
-import Turbinado.Environment.Logger
-import Turbinado.Environment.MimeTypes
 
 data Flag 
      = Port Integer
@@ -63,13 +66,11 @@ main =
 startServer :: PortNumber -> IO ()
 startServer pnr
     = withSocketsDo $ 
-      do e <- foldl (>>=) newEnvironment [ addLoggerToEnvironment,
-                                           addCodeStoreToEnvironment
-                                         , addMimeTypesToEnvironment "Config/mime.types"]
-         debugM e "Start listening"
+      do e <- runController (sequence_ [ addLoggerToEnvironment
+                                       , addCodeStoreToEnvironment
+                                       , addMimeTypesToEnvironment "Config/mime.types"]) newEnvironment
          sock <- listenOn $ PortNumber pnr
          workerPoolMVar <- newMVar $ WorkerPool 0 [] []
-         debugM e "Need to fork off the threadKillerLoop"
          mainLoop sock workerPoolMVar e
     where
       --mainLoop :: Socket -> WorkerPool -> IO ()
@@ -92,9 +93,7 @@ workerLoop workerPoolMVar e chan
     = do mainLoop
     where
       mainLoop
-          = do -- debugM e "Wait for requests"
-               sock      <- readChan chan
-               -- getClockTime >>= (\t -> debugM e $ "Received request @ " ++ (show $ toUTCTime t))
+          = do sock      <- readChan chan
                handleRequest sock e
                putWorkerThread workerPoolMVar chan
                mainLoop
@@ -102,12 +101,11 @@ workerLoop workerPoolMVar e chan
 handleRequest :: Socket -> Environment -> IO ()
 handleRequest sock e
     = (do mytid <- myThreadId
-          e' <- foldl ( >>= ) (return e) [ addSettingsToEnvironment
-                                         , addResponseToEnvironment
+          e' <- runController (sequence_ [ addViewDataToEnvironment
+                                         , addSettingsToEnvironment
                                          , receiveRequest sock
                                          , tryStaticContent 
-                                         , addRoutesToEnvironment ]
-          -- debugM e $ "Handling Request : " ++ (URI.uriPath $ HTTP.rqURI $ getRequest e')
+                                         , addRoutesToEnvironment ]) e
           case (isResponseComplete e') of
             True  -> sendResponse sock e'
             False -> do e'' <- requestHandler e'
@@ -134,23 +132,21 @@ getWorkerThread mv e =
   do wp <- takeMVar mv
      case wp of
        WorkerPool n [] bs -> 
-         do debugM e "Making new worker thread"
-            chan <- newChan
-            tid <- forkIO $ workerLoop mv e chan
+         do chan <- newChan
+            e' <- runController (addDatabaseToEnvironment) e
+            tid <- forkIO $ workerLoop mv e' chan
             let workerThread = WorkerThread tid chan 
             expiresTime <- getCurrentTime >>= \utct -> return $ addUTCTime (fromInteger stdTimeOut) utct
             putMVar mv $ WorkerPool (n+1) [] ((workerThread, expiresTime):bs)
             return workerThread
        WorkerPool n (idle:idles) busies ->
-         do -- debugM e ("Using existing worker thread (" ++ (show $ length ([idle] ++ idles )) ++ ", " ++ (show $ length busies) ++ ")")
-            expiresTime <- getCurrentTime >>= \utct -> return $ addUTCTime (fromInteger stdTimeOut) utct
+         do expiresTime <- getCurrentTime >>= \utct -> return $ addUTCTime (fromInteger stdTimeOut) utct
             putMVar mv $ WorkerPool n idles ((idle, expiresTime):busies)
             return idle
 
 putWorkerThread mv chan = do
                WorkerPool n is bs <- takeMVar mv
                mytid <- myThreadId
-               -- getClockTime >>= (\t ->  debugM e ("Adding me back to the WorkerPool (" ++ (show $ length is) ++ ", " ++ (show $ length bs) ++ ") @ " ++ (show $ toUTCTime t)) )
                let bs' = filter (\(WorkerThread tid _, _) -> tid /= mytid) bs
                putMVar mv $ WorkerPool n ((WorkerThread mytid chan):is) bs'
 

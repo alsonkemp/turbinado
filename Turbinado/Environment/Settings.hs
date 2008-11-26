@@ -1,9 +1,8 @@
 module Turbinado.Environment.Settings (
         addSettingsToEnvironment,
         getSetting,
+        getSetting_u,
         setSetting,
-        getSettings,
-        setSettings,
         getController,
         clearLayout,
         getLayout,
@@ -17,53 +16,47 @@ import Control.Monad.State
 import Data.Maybe
 import Data.Char
 import System.FilePath
-import Turbinado.Environment
+import Turbinado.Environment.Types
+import Turbinado.Controller.Monad
 
-type Settings = M.Map String Dynamic
-
-
-settingsKey = "settings"
-
-addSettingsToEnvironment :: EnvironmentFilter
-addSettingsToEnvironment  = setSettings (M.fromList defaultSettings :: Settings)
-
-getSettings :: Environment -> Settings
-getSettings  = getKey settingsKey
-
-setSettings :: Settings -> EnvironmentFilter
-setSettings = setKey settingsKey
+addSettingsToEnvironment :: Controller ()
+addSettingsToEnvironment  = do e <- get
+                               put $ e {getSettings = Just $ M.fromList defaultSettings }
 
 ------------------------------------------------------------------
 -- Set/Get an individual settting
 ------------------------------------------------------------------
-getSetting :: (Typeable a) => String -> Environment -> Maybe a
-getSetting s e = maybe Nothing (fromDynamic) ( M.lookup s (getKey settingsKey e) )
+getSetting :: Typeable a => String -> Controller (Maybe a)
+getSetting s = do e <- get
+                  return $ maybe Nothing (fromDynamic) ( M.lookup s (fromJust $ getSettings e) )
 
-getSetting_u :: (Typeable a) => String -> Environment -> a
-getSetting_u s e = fromJust (getSetting s e)
+getSetting_u s =  getSetting s >>= \v -> return (fromJust v)
 
-setSetting :: (Typeable a) => String -> a -> EnvironmentFilter
-setSetting k v e = do let settings = getSettings e
-                      setSettings (M.insert k (toDyn v) settings) e
+setSetting :: (Typeable a) => String -> a -> Controller ()
+setSetting k v = do e <- get
+                    put $ e { getSettings = Just (M.insert k (toDyn v) (fromJust $ getSettings e))}
 
 defaultSettings = [ ("layout", toDyn "Default") ]
 
 ------------------------------------------------------------------
 -- Shorthands
 ------------------------------------------------------------------
-getController :: Environment -> (FilePath, String)
-getController e = (             fromJust $ getSetting "controller" e,
-                   actionName $ fromJust $ getSetting "action" e)
-                    where actionName s = (toLower $ head s) : (tail s)
+getController :: Controller (FilePath, String)
+getController = do e <- get
+                   c <- getSetting "controller"
+                   a <- getSetting "action"
+                   return $ (fromJust c,
+                             actionName $ fromJust a)
+                               where actionName s = (toLower $ head s) : (tail s)
 
-clearLayout :: EnvironmentFilter
+clearLayout :: Controller ()
 clearLayout = setSetting "layout" ""
 
-getLayout :: Environment -> (FilePath, String)
-getLayout e = (fromJust $ getSetting "layout" e, "page")
+getLayout :: Controller (FilePath, String)
+getLayout = (\l -> return (fromJust l, "page")) =<< getSetting "layout"
 
-getView :: Environment -> (FilePath, String)
-getView e = let c = fromJust $ getSetting "controller" e
-                a = fromJust $ getSetting "action" e
-            in (joinPath $ map normalise [c,a], "page")
+getView :: Controller (FilePath, String)
+getView = do c <- getSetting_u "controller"
+             a <- getSetting_u "action"
+             return (joinPath $ map normalise [c,a], "page")
 

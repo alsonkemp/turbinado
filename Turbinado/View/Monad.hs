@@ -2,6 +2,8 @@ module Turbinado.View.Monad (
         -- * The 'View' Monad
         View, ViewT, ViewT',
         runView, runViewT,
+        get,
+        put,
         -- * Functions
         doIO, catch
         ) where
@@ -15,7 +17,7 @@ import HSX.XMLGenerator (XMLGenT(..), unXMLGenT)
 import qualified Network.HTTP as HTTP
 import Prelude hiding (catch)
 
-import Turbinado.Environment
+import Turbinado.Environment.Types
 import Turbinado.View.Exception
 import Turbinado.Utility.General
 
@@ -25,7 +27,7 @@ import Turbinado.Utility.General
 
 -- | The View monad is a reader wrapper around
 -- the IO monad, but extended with an XMLGenerator wrapper.
-
+-- View = XMLGenT (StateT Environment IO) a
 type View =  ViewT IO
 
 type ViewT' m = StateT Environment m
@@ -39,7 +41,7 @@ dummyEnv = undefined
 runView :: View a -> Environment -> IO (a, Environment)
 runView p e = runStateT  (unXMLGenT p) e
 
-runViewT :: ViewT IO a -> Environment -> IO (a, Environment)
+runViewT ::  ViewT IO a -> Environment -> IO (a, Environment)
 runViewT = runStateT . unXMLGenT
 
 -- | Execute an IO computation within the View monad.

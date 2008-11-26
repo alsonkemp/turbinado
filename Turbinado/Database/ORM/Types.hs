@@ -1,0 +1,13 @@
+module Turbinado.Database.ORM.Types where
+
+import qualified Data.Map as M
+import Database.HDBC
+
+type Tables = M.Map TableName (Columns, PrimaryKey)
+type TableName = String
+type Columns = M.Map ColumnName ColumnDesc
+type ColumnName = String
+type PrimaryKey = [ColumnName]
+type ColumnDesc = (SqlColDesc, ForeignKeyReferences)
+type ForeignKeyReferences = [(TableName, ColumnName)]  -- all columns which are targets of foreign keys
+

@@ -1,30 +1,47 @@
 module Turbinado.Environment (
   Environment,
-  EnvironmentFilter,
   newEnvironment,
-  getKey,
-  setKey
+  EnvironmentFilter
   ) where
 
-import Data.Dynamic
 import Data.Map
 import Data.Maybe
 import System.IO
-import System.IO.Unsafe
-import System.Log.Logger
+import Config.Master
 
--- Using Dynamic for two reasons:
---  1) Break module cycles (Environment doesn't import the various Request, Response, etc bits
---  2) Extensibility - easy for plugins to add data to the Environment
-type Environment = Map String Dynamic
+import Turbinado.Environment.CodeStore
+import Turbinado.Environment.Logger
+import Turbinado.Environment.MimeTypes
+import Turbinado.Environment.Request
+import Turbinado.Environment.Response
+import Turbinado.Environment.Routes
+import Turbinado.Environment.Settings
+import Turbinado.Environment.ViewData
 
+data Environment = Environment { getCodeStore :: Maybe CodeStore
+                               , getLogger    :: Maybe Logger
+                               , getMimeTypes :: Maybe MimeTypes
+                               , request      :: Maybe Request
+                               , getResponse  :: Maybe Response
+                               , getRoutes    :: Maybe Routes
+                               , getSettings  :: Maybe Settings
+                               , getViewData  :: Maybe ViewData
+                               , getAppEnvironment :: Maybe AppEnvironment
+                               }
+                                
 type EnvironmentFilter = Environment -> IO Environment
 
 newEnvironment :: IO Environment
-newEnvironment = return (empty :: Environment)
+newEnvironment = return $ Environment { 
+                                 getCodeStore = Nothing
+                               , getLogger    = Nothing
+                               , getMimeTypes = Nothing
+                               , getRequest   = Nothing
+                               , getResponse  = Nothing
+                               , getRoutes    = Nothing
+                               , getSettings  = Nothing
+                               , getViewData  = Nothing
+                               , getAppEnvironment = Nothing
+                               }
+                   
 
-getKey :: (Typeable a) => String -> Environment -> a
-getKey k e =  fromJust $ fromDynamic $ e ! k
-
-setKey :: (Typeable a) => String -> a -> EnvironmentFilter
-setKey k v = \e -> return $  insert k (toDyn v) e
