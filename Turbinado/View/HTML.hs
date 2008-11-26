@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Turbinado.HTML
--- Copyright   :  (c) Niklas Broberg, Jeremy Shaw 2008
+-- Module      :  Turbinado.View.HTML
+-- Copyright   :  (c) Alson Kemp 2008, Niklas Broberg, Jeremy Shaw 2008
 -- License     :  BSD-style (see the file LICENSE.txt)
 -- 
--- Maintainer  :  Niklas Broberg, nibro@cs.chalmers.se
+-- Maintainer  :  Alson Kemp (alson@alsonkemp.com)
 -- Stability   :  experimental
 -- Portability :  Haskell 98
 --

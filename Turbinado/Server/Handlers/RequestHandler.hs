@@ -1,17 +1,16 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Turbinado.RequestHandler
--- Copyright   :  (c) Niklas Broberg 2004,
--- License     :  BSD-style (see the file LICENSE.txt)
+-- Module      :  Turbinado.Server.Handlers.RequestHandler
+-- Copyright   :  (c) Alson Kemp 2008, Niklas Broberg 2004,
+-- License     :  BSD-style (see the file LICENSE)
 -- 
--- Maintainer  :  Niklas Broberg, d00nibro@dtek.chalmers.se
+-- Maintainer  :  Alson Kemp, Alson@AlsonKemp.com
 -- Stability   :  experimental
 -- Portability :  portable
 --
 -- A utility for the server that handles a recieved request, producing
 -- a response.
 --
--- TODO: * Session variable handling
 -----------------------------------------------------------------------------
 module Turbinado.Server.Handlers.RequestHandler (
     requestHandler

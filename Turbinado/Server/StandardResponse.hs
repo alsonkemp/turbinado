@@ -1,11 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Turbinado.StandardResponse
--- Copyright   :  (c) Andreas Farre, Niklas Broberg, 2004
--- License     :  BSD-style (see the file LICENSE.txt)
+-- Module      :  Turbinado.Server.StandardResponse
+-- Copyright   :  (c) Alson Kemp 2008, Andreas Farre, Niklas Broberg, 2004
+-- License     :  BSD-style (see the file LICENSE)
 -- 
--- Maintainer  :  Andreas Farre, d00farre@dtek.chalmers.se,
---        	  Niklas Broberg, d00nibro@dtek.chalmers.se
+-- Maintainer  :  Alson Kemp (Alson@AlsonKemp.com)
 -- Stability   :  experimental
 -- Portability :  portable
 --

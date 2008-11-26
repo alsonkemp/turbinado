@@ -1,11 +1,12 @@
 Name:                turbinado
-Version:             0.1
+Version:             0.2
 Synopsis:            Haskell web application server
 Description:         The Haskell web application server
-License:             GPL
+License:             BSD
 License-file:        LICENSE
 Author:              Alson Kemp
 Maintainer:          Alson Kemp (alson@alsonkemp.com)
+Homepage:            http://www.turbinado.org
 Build-Type:          Simple
 
 Executable server

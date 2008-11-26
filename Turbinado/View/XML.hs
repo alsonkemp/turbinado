@@ -1,10 +1,10 @@
 -----------------------------------------------------------------------------
 -- |
--- Module      :  Turbinado.XML
--- Copyright   :  (c) Niklas Broberg 2008
--- License     :  BSD-style (see the file LICENSE.txt)
+-- Module      :  Turbinado.View.XML
+-- Copyright   :  (c) Alson Kemp 2008, Niklas Broberg 2008
+-- License     :  BSD-style (see the file LICENSE)
 -- 
--- Maintainer  :  Niklas Broberg, nibro@cs.chalmers.se
+-- Maintainer  :  Alson Kemp (alson@alsonkemp.com)
 -- Stability   :  experimental
 -- Portability :  Haskell 98
 --
