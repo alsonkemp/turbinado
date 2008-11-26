@@ -1,31 +1,51 @@
 module Turbinado.Database.ORM.PostgreSQL where
 
+import Data.List
 import Database.HDBC
 
-getPrimaryKeys :: IConnection conn => conn -> [String] -> IO [String, [String]]
-getPrimaryKeys conn ts = mapM (\t -> getPrimaryKey conn t >>= \pks -> return (t, pks) ) ts
+import Turbinado.Database.ORM.Types
 
-getPrimaryKey :: IConnection conn => conn -> String -> IO [String]
-getPrimaryKey conn t = quickQuery conn (concatenate [
-     " SELECT ins.tablename, ins.indexname, i.indkey, a.*"
-    ," FROM pg_indexes ins                               "
-    ,"   INNER JOIN pg_class c ON ins.indexname = c.relname "
-    ,"   INNER JOIN pg_index i ON c.oid = i.indexrelid "
-    ,"   INNER JOIN pg_attribute a ON c.oid = a.attrelid "
-    ," WHERE ins.tablename = ? AND contype = 'f';"]) [toSql t]
-    
-getAllForeignKeys :: IConnection conn => conn -> [String] -> IO [(String, String), (String, String)]
-getAllForeignKeys conn ts = mapM (\t -> getForeignKeys conn t) ts
+getPrimaryKeys :: IConnection conn => conn -> String -> IO [String]
+getPrimaryKeys conn t = 
+   do rs <- quickQuery conn (concat
+              [ "select a.attname as column_name"
+              , "    from pg_constraint con"
+              , "    join pg_namespace n on (n.oid = con.connamespace)"
+              , "    join pg_class c on (c.oid = con.conrelid)"
+              , "    join (select g.s"
+              , "            from generate_series(1,current_setting('max_index_keys')::int,1) as g(s)"
+              , "            ) s(i) on (s.i <= array_upper(con.conkey,1))"
+              , "    join pg_attribute a on (a.attrelid = c.oid"
+              , "                            and a.attnum = con.conkey[i])"
+              , "  where con.conrelid != 0"
+              , "    and con.contype in ('p','u')"
+              , "    and c.relname = ?;"]) [toSql t]
+      return $ map (\r -> fromSql $ r !! 0) rs 
 
-getForeignKeys_ :: IConnection conn => conn -> String -> IO [((String, String), (String, String))]
-getForeignKeys_ conn t = quickQuery conn (concatenate [
-     " SELECT ins.tablename, ins.indexname, i.indkey, a.*"
-    ," FROM pg_indexes ins                               "
-    ,"   INNER JOIN pg_class c ON ins.indexname = c.relname "
-    ,"   INNER JOIN pg_index i ON c.oid = i.indexrelid "
-    ,"   INNER JOIN pg_attribute a ON c.oid = a.attrelid "
-    ," WHERE ins.tablename = ?;"]) [toSql t]
-    
+getForeignKeyReferences :: IConnection conn => conn -> String -> IO [(String, String, String)]
+getForeignKeyReferences conn t = 
+    do rs <- quickQuery conn (concat
+               [ "select a2.attname as key_column,"
+               , "       c1.relname as foreign_key_table_name,"
+               , "       a1.attname as foreign_key_column"
+               , "       from pg_constraint k1"
+               , "         join pg_namespace n1 on (n1.oid = k1.connamespace)"
+               , "         join pg_class c1 on (c1.oid = k1.conrelid)"
+               , "         join pg_class c2 on (c2.oid = k1.confrelid)"
+               , "         join pg_namespace n2 on (n2.oid = c2.relnamespace)"
+               , "         join (select g.s"
+               , "                 from generate_series(1,current_setting('max_index_keys')::int,1) as g(s)"
+               , "              )s(i) on (s.i <= array_upper(k1.conkey,1))"
+               , "         join pg_attribute a1"
+               , "           on (a1.attrelid = c1.oid and a1.attnum = k1.conkey[s.i])"
+               , "         join pg_attribute a2"
+               , "           on (a2.attrelid = c2.oid and a2.attnum = k1.confkey[s.i])"
+               , "       where k1.conrelid != 0"
+               , "         and k1.confrelid != 0"
+               , "         and k1.contype = 'f'"
+               , "         and c2.relname = ?;"
+               ]) [toSql t]
+       return $ map (\r -> (fromSql $ r !! 0, fromSql $ r !! 1, fromSql $ r !! 2)) rs
     
 {-
 
@@ -45,6 +65,7 @@ INDEX COLUMNS
          join pg_namespace n on (n.oid = ct.relnamespace)
          join _pg_sv_keypositions() s(i) on (s.i <= x.indnatts)
          join pg_opclass o on (o.oid = x.indclass[i-1])
+         r
          join pg_namespace n2 on (n2.oid = o.opcnamespace)
          left join pg_attribute a on (a.attrelid = ct.oid
                                       and a.attnum = x.indkey[i-1])

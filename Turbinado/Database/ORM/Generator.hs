@@ -1,41 +1,46 @@
 module Turbinado.Database.ORM.Generator where
 
+import Control.Monad
+import Data.List
 import qualified Data.Map as M
+import Data.Maybe
+import Database.HDBC
 
 import Config.Master
+import Turbinado.Database.ORM.Types
+import Turbinado.Database.ORM.Output
+import Turbinado.Database.ORM.PostgreSQL
 
-type TableName = String
-type ColumnName = String
-type Column = (SqlColDesc, DependentKeys, Boolean)  -- Boolean == isPrimaryKey
-type DependentKeys = [((ColumnName, (TableName, ColumnName))]  -- all columns which are targets of foreign keys
-
-type TableColumn = (TableName, ColumnName)
-type TableColumns = M.Map TableColumn Column
-
-generateModels :: FilePath -> IO ()
-generateModels cs fp = do conn <- databaseConnection
-                          ts <- Database.HDBC.getTables conn
-                          ds <- zip ts $ mapM (describeTable conn) ts
-                          let tcs = combineTablesColumns ts ds
-                          -- TODO: Pull in indices
-                          pks <- getPrimaryKeys conn ts
-                          let tcs' = combinePrimaryKeys pks tcs 
-                          fks <- getForeignKeys t
-                          let tcs'' = combineForeignKeys fks tcs'
+generateModels ::  IO ()
+generateModels = do conn <- fromJust databaseConnection
+                    ts <- getTables conn
+                    -- TODO: Pull in indices
+                    tcs <- foldM (buildTable conn) (M.empty) ts
+                    writeModels tcs
                           
                           
-combineTablesColumns :: [TableName] -> [(ColumnName, SqlColDesc)] -> TableColumns
-combineTablesColumsn ts cs =
-    M.fromList $ zipWith (\t (c, d) -> ((t,c), (d, [], False)) ) ts cs 
+buildTable conn tcs t = do ds <- describeTable conn t
+                           let tcs'  = combineDescription t ds tcs
+                           pks <- getPrimaryKeys conn t
+                           let tcs'' = combinePrimaryKeys t pks tcs'
+                           fks <- getForeignKeyReferences conn t
+                           return $ combineForeignKeyReferences t fks tcs''
 
-combinePrimaryKeys :: [(TableName, [ColumnName])] -> TableColumns -> TableColumns
-combinePrimaryKeys pks tcs =
-     foldl (\tcs (t, cs) -> foldl (\c -> M.adjust (\(d,k,_) -> (d, k, True)) (t, c) ) tcs cs) tcs pks
+combineDescription t ds tcs = M.insert t (cols, []) tcs
+  where cols = M.fromList $ 
+                map (\(columnName, columnDescription) -> (columnName, (columnDescription,[]))) ds
 
-combineForeignKeys :: [(TableColumn, TableColumn)] -> TableColumns -> TableColumns
-combineForeignKeys fks tcs = foldl (\tcs' fk -> combineForeignKey fk tcs') tcs fks
+combinePrimaryKeys :: TableName -> [ColumnName] -> Tables -> Tables
+combinePrimaryKeys t pks tcs = M.adjust (\(c, _) -> (c,pks)) t tcs
 
-combineForeignKey :: (TableColumn, TableColumn) -> TableColumns -> TableColumns
-combineForeignKey (parTable, parColumn), ((depTable, depColumn)) tcs =
-    let c@(d, k, i) = M.lookup (parTable, parColumn) tcs  in
-    M.insert (parTable, parColumn) (d, k `union` (parColumn, (depTable, depColumn)), i) t
+combineForeignKeyReferences :: TableName -> [(ColumnName, TableName, ColumnName)] -> Tables -> Tables
+combineForeignKeyReferences t fks tcs =
+    M.adjust
+      (\(cs, pks) -> (foldl (worker) cs fks, pks))
+        t tcs
+  where worker cs (c, tt, tc) = M.adjust (\(cd, deps) -> (cd, [(tt, tc)] `union` deps)) c cs
+{-
+ - combineTablesColumns :: [TableName] -> [(ColumnName, SqlColDesc)] -> Tables
+ - combineTablesColumsn ts cs =
+ - M.fromList $ zipWith (\t (c, d) -> (t, (c, [])) ) ts cs 
+ -}
