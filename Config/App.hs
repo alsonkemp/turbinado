@@ -28,7 +28,7 @@ newAppEnvironment = AppEnvironment
 -- Database connection
 ----------------------------------------------------------------
 databaseConnection :: Maybe (IO Connection)
-databaseConnection = Just $ connectPostgreSQL "host=localhost dbname=turbinado user=turbinado password=turbinado"
+databaseConnection = Nothing
 
 
 ----------------------------------------------------------------
