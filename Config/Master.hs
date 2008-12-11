@@ -1,10 +1,8 @@
 module Config.Master (
         module Config.Master,
-        module Config.App,
-        Turbinado.Server.Handlers.SessionHandlers.Simple.getSessionHandler
+        module Config.App
         ) where
 
-import Turbinado.Server.Handlers.SessionHandlers.Simple
 import Config.App
 
 ----------------------------------------------------------------
@@ -28,6 +26,7 @@ mUserPkgConf = [""]
 -- Paths
 ----------------------------------------------------------------
 
+modelDir       = "App/Models"
 viewDir        = "App/Views"
 viewStub       = "Turbinado/Stubs/View.hs"
 layoutDir      = "App/Layouts"
@@ -36,7 +35,7 @@ controllerDir  = "App/Controllers"
 controllerStub = "Turbinado/Stubs/Controller.hs"
 
 configDir = "Config"
-searchDirs = [viewDir, layoutDir, controllerDir, rootDir, configDir, compiledDir]
+searchDirs = [modelDir, viewDir, layoutDir, controllerDir, rootDir, configDir, compiledDir]
 
 staticDirs = ["static", "tmp/cache"]
 compiledDir = "tmp/compiled"

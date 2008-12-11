@@ -17,10 +17,12 @@ module Turbinado.View (
         module Turbinado.View.XML.PCDATA,
         module Turbinado.View.XMLGenerator,
         module Turbinado.Environment.CodeStore,
+        module Turbinado.Environment.Params,
         module Turbinado.Environment.Request,
         module Turbinado.Environment.Response,
         module Turbinado.Environment.Settings,
-        module Turbinado.Environment.Types
+        module Turbinado.Environment.Types,
+        module Turbinado.Environment.ViewData
         ) where
 
 import Control.Exception (catchDyn)
@@ -36,10 +38,12 @@ import System.FilePath
 
 import Turbinado.Controller.Monad hiding (catch)
 import Turbinado.Environment.CodeStore
+import Turbinado.Environment.Params
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 import Turbinado.Environment.Settings
 import Turbinado.Environment.Types
+import Turbinado.Environment.ViewData
 import Turbinado.Server.StandardResponse
 import Turbinado.View.Exception
 import Turbinado.View.HTML

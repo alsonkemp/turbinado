@@ -8,6 +8,7 @@ type TableName = String
 type Columns = M.Map ColumnName ColumnDesc
 type ColumnName = String
 type PrimaryKey = [ColumnName]
-type ColumnDesc = (SqlColDesc, ForeignKeyReferences)
+type ColumnDesc = (SqlColDesc, ForeignKeyReferences, HasDefault)
+type HasDefault = Bool
 type ForeignKeyReferences = [(TableName, ColumnName)]  -- all columns which are targets of foreign keys
 

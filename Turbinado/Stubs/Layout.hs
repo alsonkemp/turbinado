@@ -4,4 +4,5 @@ import Turbinado.View
 import Turbinado.View.Helpers
 
 -- SPLIT HERE
+page :: View XML
 

@@ -4,7 +4,6 @@ import Data.Maybe
 import qualified Network.HTTP as HTTP
 import qualified Network.URI  as URI
 
-page :: View XML
 page = <html>
          <head>
            <% styleSheet "normalize" "screen" %>
@@ -30,11 +29,12 @@ page = <html>
              </div>
              <div id="menu">
                <ul>
-                 <% menuItem "/Home/Index"       "Home" %>
-                 <% menuItem "/Home/About"       "About" %>
-                 <% menuItem "/Home/Performance" "Performance" %>
-                 <% menuItem "/Tutorial/Index"   "Tutorial" %>
-                 <% menuItem "/Develop/Index"    "Develop" %>
+                 <% menuItem "/Home/Index"         "Home" %>
+                 <% menuItem "/Home/Performance"   "Performance" %>
+                 <% menuItem "/Home/Architecture"  "Architecture" %>
+                 <% menuItem "/Home/Install"       "Install" %>
+                 <% menuItem "/Tutorial/Index"     "Tutorial" %>
+                 <% menuItem "/Develop/Index"      "Develop" %>
                </ul>
              </div>
              <div id="page">

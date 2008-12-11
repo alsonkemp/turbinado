@@ -12,6 +12,7 @@ import Data.Maybe
 import Data.Typeable
 import Data.Dynamic
 
+import Turbinado.Environment.Logger
 import Turbinado.Environment.Types
 import Turbinado.Controller.Monad
 import Turbinado.View.Monad

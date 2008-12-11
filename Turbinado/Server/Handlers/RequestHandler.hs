@@ -73,18 +73,21 @@ retrieveAndRunController =
               case p of
                  CodeLoadController p' _ _ -> p'
                  CodeLoadView       _  _ _ -> error "retrieveAndRunView called, but returned CodeLoadView"
-                 CodeLoadFailure           -> fileNotFoundResponse c
+                 CodeLoadFailure    e      -> errorResponse e
 
 retrieveAndRunLayout :: Controller ()
 retrieveAndRunLayout =
-           do l <- getLayout
-              p    <- case l of 
-                     ("", _) -> do v <- getView
-                                   retrieveCode CTView v    -- If no Layout, then pull a View
-                     _       -> retrieveCode CTLayout l
-              case p of
-                 CodeLoadView       p' _ _ -> evalView p'
-                 CodeLoadController _  _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                 CodeLoadFailure           -> fileNotFoundResponse (joinPath [(fst l), (snd l)])
+           do e <- get
+              case (isResponseComplete e) of
+                True -> return ()
+                False -> do l <- getLayout
+                            p    <- case l of 
+                                     ("", _) -> do v <- getView
+                                                   retrieveCode CTView v    -- If no Layout, then pull a View
+                                     _       ->    retrieveCode CTLayout l
+                            case p of
+                              CodeLoadView       p' _ _ -> evalView p'
+                              CodeLoadController _  _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                              CodeLoadFailure    e      -> errorResponse e
 
 

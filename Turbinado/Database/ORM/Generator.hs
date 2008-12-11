@@ -24,11 +24,13 @@ buildTable conn tcs t = do ds <- describeTable conn t
                            pks <- getPrimaryKeys conn t
                            let tcs'' = combinePrimaryKeys t pks tcs'
                            fks <- getForeignKeyReferences conn t
-                           return $ combineForeignKeyReferences t fks tcs''
+                           let tcs''' = combineForeignKeyReferences t fks tcs''
+                           hds <- getDefaultColumns conn t
+                           return $ combineDefaultColumns t hds tcs'''
 
 combineDescription t ds tcs = M.insert t (cols, []) tcs
   where cols = M.fromList $ 
-                map (\(columnName, columnDescription) -> (columnName, (columnDescription,[]))) ds
+                map (\(columnName, columnDescription) -> (columnName, (columnDescription,[], False))) ds
 
 combinePrimaryKeys :: TableName -> [ColumnName] -> Tables -> Tables
 combinePrimaryKeys t pks tcs = M.adjust (\(c, _) -> (c,pks)) t tcs
@@ -38,9 +40,13 @@ combineForeignKeyReferences t fks tcs =
     M.adjust
       (\(cs, pks) -> (foldl (worker) cs fks, pks))
         t tcs
-  where worker cs (c, tt, tc) = M.adjust (\(cd, deps) -> (cd, [(tt, tc)] `union` deps)) c cs
-{-
- - combineTablesColumns :: [TableName] -> [(ColumnName, SqlColDesc)] -> Tables
- - combineTablesColumsn ts cs =
- - M.fromList $ zipWith (\t (c, d) -> (t, (c, [])) ) ts cs 
- -}
+  where worker cs (c, tt, tc) = M.adjust (\(cd, deps, hd) -> (cd, [(tt, tc)] `union` deps, hd)) c cs
+
+combineDefaultColumns :: TableName -> [ColumnName] -> Tables -> Tables
+combineDefaultColumns t hds tcs =
+    M.adjust
+      (\(cs, pks) -> (foldl (worker) cs hds, pks))
+        t tcs
+  where worker cs hd = M.adjust (\(cd, deps, _) -> (cd, deps, True)) hd cs
+
+

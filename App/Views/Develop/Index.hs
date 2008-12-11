@@ -1,4 +1,3 @@
-page :: View XML
 page     =  <div>
               <h2>! Windows</h2>
               <p>This software doesn't work on Windows.  Linux/Unix only at this point.</p>
@@ -6,36 +5,15 @@ page     =  <div>
               <h2>Git Repo</h2>
               <p> The <em>git</em> repo is at <% anchorTag "http://github.com/alsonkemp/turbinado/tree/master" "http://github.com/alsonkemp/turbinado/tree/master" %>.  Push patches into the repo.</p>
               
-              <h2>Dependencies</h2>
-              <p>You'll need the following:</p>
+              <h2>To Do</h2>
               <ul class="standard-list">
-                <li><% anchorTag "http://www.haskell.org/ghc" "GHC" %>
-                  <em> (darcs) </em>
+                <li>
+                  Move to a simpler templating system (e.g. <% anchorTag "http://haml.hamptoncatlin.com/" "HAML" %>-like ).  HSX is a lovely piece of work, but it's pretty finicky and I feel like I'm trying to "see the Matrix" when I read its compilation error messages.
                 </li>
-
-                <li><% anchorTag "http://code.haskell.org/HSP/haskell-src-exts/" "haskell-src-exts" %>
-                  <em> (darcs) </em>
-                </li>
-
-                <li><% anchorTag "http://code.haskell.org/HSP/harp/" "harp" %>
-                  <em> (darcs) </em>
-                </li>
-
-                <li><% anchorTag "http://git.complete.org/hslogger" "hslogger" %>
-                  <em> (git) </em>
-                </li>
-
-                <li><% anchorTag "http://code.haskell.org/HSP/hsx/" "hsx" %>
-                  <em> (darcs) </em>
-                </li>
-
-                <li><% anchorTag "http://code.haskell.org/hs-plugins" "hs-plugins" %>
-                  <em> (darcs) </em>
-                </li>
-
-                <li><% anchorTag "http://code.haskell.org/http" "http" %>
-                  <em> (darcs) </em>
-                </li>
-
+                <li>Build a mini-CMS to manage these pages.</li>
+                <li>Complete the ORM in Turbinado/Database/ORM.</li>
+                <li>Implement cookie sessions.</li>
+                <li>Implement authentication.</li>
+                <li>Copy a couple of tutorial apps from Rails/Django tutorials.</li>
               </ul>
             </div>

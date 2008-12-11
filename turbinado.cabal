@@ -2,14 +2,19 @@ Name:                turbinado
 Version:             0.2
 Synopsis:            Haskell web application server
 Description:         The Haskell web application server
-License:             BSD
+License:             BSD3
 License-file:        LICENSE
 Author:              Alson Kemp
 Maintainer:          Alson Kemp (alson@alsonkemp.com)
 Homepage:            http://www.turbinado.org
 Build-Type:          Simple
 
-Executable server
+Executable trhaml
+  Main-is:             Turbinado/View/HAML/trhaml.hs
+  Build-Depends:       base, parsec
+  ghc-options:  -O
+
+Executable turbinado
   Main-is:             Turbinado/Server.hs
   Build-Depends:       base, bytestring, containers, directory, filepath, harp, HDBC, HDBC-postgresql, hslogger, hsx, HTTP, mtl, network, old-locale, old-time, parsec, plugins, pretty, regex-compat, time
   ghc-options: -F -pgmFtrhsx -O
@@ -30,3 +35,5 @@ Executable server
             MultiParamTypeClasses,
             PatternSignatures,
             DeriveDataTypeable
+
+

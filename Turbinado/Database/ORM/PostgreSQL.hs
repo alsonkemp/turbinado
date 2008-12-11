@@ -46,7 +46,24 @@ getForeignKeyReferences conn t =
                , "         and c2.relname = ?;"
                ]) [toSql t]
        return $ map (\r -> (fromSql $ r !! 0, fromSql $ r !! 1, fromSql $ r !! 2)) rs
-    
+   
+
+getDefaultColumns:: IConnection conn => conn -> String -> IO [String]
+getDefaultColumns conn t = 
+    do rs <- quickQuery conn (concat
+               [ "select   a.attname as column_name"
+               , "    from pg_class c"
+               , "      join pg_namespace n on (n.oid = c.relnamespace)"
+               , "      join pg_attribute a on (a.attrelid = c.oid"
+               , "                              and not a.attisdropped"
+               , "                              and a.attnum > 0)"
+               , "      left join pg_attrdef ad on (a.attrelid = ad.adrelid"
+               , "                                  and a.attnum = ad.adnum)"
+               , "    where n.nspname = 'public'"
+               , "      and c.relname = ?"
+               , "      and (ad.adsrc IS NOT NULL);"]) [toSql t]
+       return $ map (\r -> fromSql $ r !! 0) rs
+
 {-
 
 INDEX COLUMNS

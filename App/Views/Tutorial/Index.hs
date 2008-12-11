@@ -1,4 +1,3 @@
-page :: View XML
 page = <div>
          <h2>DANGER WILL ROBINSON</h2>
          <p>Developers only at this point!</p>

@@ -57,7 +57,7 @@ type CodeLocation  = (FilePath, Function)
 
 data CodeStore  = CodeStore (MVar CodeMap)
 type CodeMap    = M.Map CodeLocation CodeStatus
-data CodeStatus = CodeLoadFailure |
+data CodeStatus = CodeLoadFailure String |
                   CodeLoadController (StateT Environment IO ()) Module CodeDate |
                   CodeLoadView       (XMLGenT (StateT Environment IO) XML     ) Module CodeDate
 

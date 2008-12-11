@@ -15,15 +15,13 @@ import Turbinado.Environment.Settings
 import Turbinado.View
 
 insertView :: View XML
-insertView = do e <- getEnvironment
-                let cs  = fromJust $ getCodeStore e
-                cl <- lift getView
-                --debugM $ "    Layout: insertView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
+insertView = do cl <- lift getView
+                lift $ debugM $ "    Layout: insertView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
                 c <- lift $ retrieveCode CTView cl
                 case c of
                   CodeLoadView       v _ _ -> v 
                   CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                  CodeLoadFailure          -> return $ cdata $ "CodeLoadFailure: insertView "
+                  CodeLoadFailure    e     -> return $ cdata e
                   
 styleSheet :: String -> String -> View XML
 styleSheet s m = return $ cdata $ "<link media=\"" ++ m ++"\" type=\"text/css\" rel=\"stylesheet\" href=\"/css/" ++ s ++".css\">"
