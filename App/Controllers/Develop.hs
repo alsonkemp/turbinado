@@ -1,5 +1,0 @@
-
-index :: Controller ()
-index = return () 
-
-

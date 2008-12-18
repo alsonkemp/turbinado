@@ -1,5 +1,0 @@
-#!/bin/bash
-
-runghc Setup.lhs clean
-runghc Setup.lhs configure
-runghc Setup.lhs build
