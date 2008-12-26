@@ -12,7 +12,6 @@ import Control.Monad
 import qualified Network.HTTP as HTTP
 import qualified Network.URI as URI
 import Turbinado.Controller.Exception
-import Turbinado.Controller.Monad
 import Turbinado.Environment.Types
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Request
@@ -21,18 +20,18 @@ import qualified Turbinado.Environment.Settings as S
 
 import qualified Config.Routes
 
-addRoutesToEnvironment :: Controller ()
-addRoutesToEnvironment = do e <- get
-                            put $ e {getRoutes = Just $ Routes $ parseRoutes Config.Routes.routes}
+addRoutesToEnvironment :: (HasEnvironment m) => m ()
+addRoutesToEnvironment = do e <- getEnvironment
+                            setEnvironment $ e {getRoutes = Just $ Routes $ parseRoutes Config.Routes.routes}
 
 
 ------------------------------------------------------------------------------
 -- Given an Environment
 ------------------------------------------------------------------------------
 
-runRoutes :: Controller ()
+runRoutes :: (HasEnvironment m) => m ()
 runRoutes   = do debugM $ "  Routes.runRoutes : starting"
-                 e <- get
+                 e <- getEnvironment
                  let Routes rs = fromJust $ getRoutes e
                      r         = fromJust $ getRequest e
                      p    = URI.uriPath $ HTTP.rqURI r
@@ -42,10 +41,10 @@ runRoutes   = do debugM $ "  Routes.runRoutes : starting"
                   _  -> do mapM (\(k, v) -> setSetting k v) sets
                            addDefaultAction
 
-addDefaultAction :: Controller ()
-addDefaultAction   = do e <- get
+addDefaultAction :: (HasEnvironment m) => m ()
+addDefaultAction   = do e <- getEnvironment
                         let s = fromJust $ getSettings e
-                        put $ e {getSettings = Just (M.insertWith (\ a b -> b) "action" (toDyn "Index") s)}
+                        setEnvironment $ e {getSettings = Just (M.insertWith (\ a b -> b) "action" (toDyn "Index") s)}
 
 ------------------------------------------------------------------------------
 -- Generate the Routes from [String]

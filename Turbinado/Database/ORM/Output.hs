@@ -49,7 +49,11 @@ generateModel t typeName pk cs =
   , ""
   , "import App.Models.Bases.ModelBase"
   , "import qualified Database.HDBC as HDBC"
+  , "import Data.Maybe"
   , "import System.Time"
+  , ""
+  , "import Turbinado.Environment.Types"
+  , "import Turbinado.Environment.Database"
   , ""
   , "data " ++ typeName ++ " = " ++ typeName ++ " {"
   ] ++
@@ -89,7 +93,7 @@ generateModelBase = unlines $
   ,"import Database.HDBC"
   ,"import Data.Int"
   ,""
-  ,"import Turbinado.Controller.Monad"
+  ,"import Turbinado.Environment.Types"
   ,""
   ,"-- Using phantom types here "
   ,"class DatabaseModel m where"
@@ -97,18 +101,23 @@ generateModelBase = unlines $
   ,""
   ,"type SelectString = String"
   ,"type SelectParams = [SqlValue]"
+  ,"type OrderByParams  = String"
   ,""
   ,"class (DatabaseModel model) =>"
   ,"        IsModel model where"
-  ,"        insert    :: (MonadIO m, IConnection conn) => conn -> model -> m Integer"
-  ,"        findAll   :: (MonadIO m, IConnection conn) => conn -> m [model]"
-  ,"        findAllBy :: (MonadIO m, IConnection conn) => conn -> SelectString -> SelectParams -> m [model]"
-  ,"        findOneBy :: (MonadIO m, IConnection conn) => conn -> SelectString -> SelectParams -> m model"
+  ,"        insert    :: (HasEnvironment m) => model -> m Integer"
+  ,"        findAll   :: (HasEnvironment m) => m [model]"
+  ,"        findAllWhere :: (HasEnvironment m) => SelectString -> SelectParams -> m [model]"
+  ,"        findAllOrderBy :: (HasEnvironment m) => OrderByParams -> m [model]"
+  ,"        findAllWhereOrderBy :: (HasEnvironment m) => SelectString -> SelectParams -> OrderByParams -> m [model]"
+  ,"        findOneWhere :: (HasEnvironment m) => SelectString -> SelectParams -> m model"
+  ,"        findOneOrderBy :: (HasEnvironment m) => OrderByParams -> m model"
+  ,"        findOneWhereOrderBy :: (HasEnvironment m) => SelectString -> SelectParams -> OrderByParams -> m model"
   ,""
   ,"class (DatabaseModel model) =>"
   ,"        HasFindByPrimaryKey model primaryKey | model -> primaryKey where"
-  ,"    find   :: (MonadIO m, IConnection conn) => conn -> primaryKey -> m model"
-  ,"    update :: (MonadIO m, IConnection conn) => conn -> model      -> m ()   "
+  ,"    find   :: (HasEnvironment m) => primaryKey -> m model"
+  ,"    update :: (HasEnvironment m) => model      -> m ()   "
   ,""
   ]
 
@@ -119,20 +128,40 @@ generateModelBase = unlines $
 generateIsModel :: TableName -> Columns -> TypeName -> [String]
 generateIsModel t cs typeName =
     ["instance IsModel " ++ typeName ++ " where"
-    ,"    insert conn m = do"
-    ,"        res <- liftIO $ HDBC.run conn \" INSERT INTO " ++ t ++ " (" ++ (concat $ intersperse "," $ M.keys cs) ++") VALUES (" ++ (intercalate "," (take (M.size cs) (repeat "?"))) ++ ")\""
+    ,"    insert m = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res  <- liftIO $ HDBC.handleSqlError $ HDBC.run conn \" INSERT INTO " ++ t ++ " (" ++ (concat $ intersperse "," $ M.keys cs) ++") VALUES (" ++ (intercalate "," (take (M.size cs) (repeat "?"))) ++ ")\""
     ,"                  [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m") (M.keys cs) ) ++ "]"
-    ,"        liftIO $ HDBC.commit conn"
-    ,"        i <- liftIO $ HDBC.catchSql (HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Int)]]) ) "
+    ,"        liftIO $ HDBC.handleSqlError $ HDBC.commit conn"
+    ,"        i <- liftIO $ HDBC.catchSql (HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Int)]]) ) "
     ,"        return $ HDBC.fromSql $ head $ head i"
-    ,"    findAll conn = do"
-    ,"        res <- liftIO $ HDBC.quickQuery' conn \"SELECT " ++ cols cs ++ " FROM " ++ t ++ "\" []"
+    ,"    findAll = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT " ++ cols cs ++ " FROM " ++ t ++ "\" []"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
-    ,"    findAllBy conn ss sp = do"
-    ,"        res <- liftIO $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") \")  sp"
+    ,"    findAllWhere ss sp = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") \")  sp"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
-    ,"    findOneBy conn ss sp = do"
-    ,"        res <- liftIO $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") LIMIT 1\")  sp"
+    ,"    findAllOrderBy op = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY ?\") [HDBC.toSql op]"
+    ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
+    ,"    findAllWhereOrderBy ss sp op = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY ? \")  (sp ++ [HDBC.toSql op])"
+    ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
+    ,"    findOneWhere ss sp = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") LIMIT 1\") sp"
+    ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
+    ,"    findOneOrderBy op = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY ? LIMIT 1\")  [HDBC.toSql op]"
+    ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
+    ,"    findOneWhereOrderBy ss sp op = do"
+    ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY ? LIMIT 1\")  (sp ++ [HDBC.toSql op])"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
      ]
 
@@ -141,8 +170,9 @@ generateHasFindByPrimaryKey t cs typeName pk =
   case (length  pk) of
     0 -> [""]
     _ -> ["instance HasFindByPrimaryKey " ++ typeName ++ " " ++ " (" ++ unwords (intersperse "," (map (\c -> getHaskellTypeString $ colType $ (\(c',_,_) -> c') $ fromJust $ M.lookup c cs) pk)) ++ ") " ++ " where"
-         ,"    find conn pk@(" ++ (concat $ intersperse ", " $ map (\i -> "pk"++(show i)) [1..(length pk)]) ++ ") = do"
-         ,"        res <- liftIO $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t ++ " WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
+         ,"    find pk@(" ++ (concat $ intersperse ", " $ map (\i -> "pk"++(show i)) [1..(length pk)]) ++ ") = do"
+         ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t ++ " WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
          ,"        case res of"
          ,"          [] -> throwDyn $ HDBC.SqlError"
          ,"                           {HDBC.seState = \"\","
@@ -156,10 +186,11 @@ generateHasFindByPrimaryKey t cs typeName pk =
          ,"                            HDBC.seErrorMsg = \"Too many records found when finding by Primary Key:" ++ t ++ " : \" ++ (show pk)"
          ,"                           }"
          ,""
-         ,"    update conn m = do"
-         ,"        res <- liftIO $ HDBC.run conn \"UPDATE " ++ t ++ " SET (" ++ (unwords $ intersperse "," $ M.keys cs) ++ ") = (" ++ (intercalate "," $ (take (M.size cs) (repeat "?"))) ++ ") WHERE (" ++ (generatePrimaryKeyWhere pk)  ++")\""
+         ,"    update m = do"
+         ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn \"UPDATE " ++ t ++ " SET (" ++ (unwords $ intersperse "," $ M.keys cs) ++ ") = (" ++ (intercalate "," $ (take (M.size cs) (repeat "?"))) ++ ") WHERE (" ++ (generatePrimaryKeyWhere pk)  ++")\""
          ,"                  [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m") (M.keys cs) ) ++ ", " ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m") pk ) ++ "]"
-         ,"        liftIO $ HDBC.commit conn"
+         ,"        liftIO $ HDBC.handleSqlError $ HDBC.commit conn"
          ,"        return ()"
          ]
 
@@ -215,11 +246,11 @@ getHaskellTypeString    SqlUTCTimeT = "TimeDiff"
 getHaskellTypeString    _ = error "Don't know how to translate this SqlTypeId to a SqlValue"
 
 
-type SelectParameters = String
+--type SelectParameters = String
 
-class TableType a where
-  find   :: (IConnection conn) => conn -> Int -> a
-  findBy :: (IConnection conn) => conn -> SelectParameters -> [a]
+--class TableType a where
+--  find   :: (IConnection conn) => conn -> Int -> a
+--  findBy :: (IConnection conn) => conn -> SelectParameters -> [a]
 
 --  
 -- Converts "column_name" to "ColumnName" (for types)

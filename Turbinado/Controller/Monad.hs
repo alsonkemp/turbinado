@@ -7,13 +7,13 @@ module Turbinado.Controller.Monad (
         get,
         put,
         -- * Functions
-        doIO, catch
+        liftIO, catch
         ) where
 
 import Control.Exception (catchDyn)
 
 import Control.Monad.State
-import Control.Monad.Trans (MonadIO(..))
+import Control.Monad.Trans (MonadIO(..), liftIO)
 import Data.Maybe
 import Prelude hiding (catch)
 
@@ -30,6 +30,9 @@ import Turbinado.Utility.General
 
 type Controller = StateT Environment IO
 
+instance HasEnvironment Controller where
+  getEnvironment = get
+  setEnvironment = put
 
 -- | Runs a Controller computation in a particular environment. Since Controller wraps the IO monad,
 -- the result of running it will be an IO computation.
@@ -38,10 +41,6 @@ runController c e = (execStateT c) e
 
 withController :: (Environment -> Environment) -> Controller a -> Controller a
 withController = withStateT
-
--- | Execute an IO computation within the Controller monad.
-doIO :: IO a -> Controller a
-doIO = liftIO
 
 -----------------------------------------------------------------------
 -- Exception handling

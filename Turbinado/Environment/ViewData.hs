@@ -14,25 +14,23 @@ import Data.Dynamic
 
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Types
-import Turbinado.Controller.Monad
-import Turbinado.View.Monad
 
-addViewDataToEnvironment :: Controller ()
-addViewDataToEnvironment  = do e <- get
-                               put $ e {getViewData = Just (M.empty :: ViewData)}
+addViewDataToEnvironment :: (HasEnvironment m) => m ()
+addViewDataToEnvironment  = do e <- getEnvironment
+                               setEnvironment $ e {getViewData = Just (M.empty :: ViewData)}
 
-getViewDataValue :: (Typeable a) => String -> View (Maybe a)
-getViewDataValue k = do e <- lift get
+getViewDataValue :: (HasEnvironment m, Typeable a) => String -> m (Maybe a)
+getViewDataValue k = do e <- getEnvironment
                         case (M.lookup k $ fromJust $ getViewData e) of
                           Nothing -> return $ Nothing
                           Just l  -> return $ fromDynamic l
 
-getViewDataValue_u :: (Typeable a) => String -> View a
+getViewDataValue_u :: (HasEnvironment m, Typeable a) => String -> m a
 getViewDataValue_u k = do v <- getViewDataValue k
                           return $ fromJust v
 
-setViewDataValue :: (Typeable a) => String -> a -> Controller ()
-setViewDataValue k v = do e <- get
+setViewDataValue :: (HasEnvironment m, Typeable a) => String -> a -> m ()
+setViewDataValue k v = do e <- getEnvironment
                           let vd  = fromJust $ getViewData e
                               vd' = M.insert k (toDyn v) vd
-                          put $ e {getViewData = Just vd'}
+                          setEnvironment $ e {getViewData = Just vd'}

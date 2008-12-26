@@ -11,8 +11,8 @@ import Turbinado.Controller.Monad
 import Turbinado.Environment.Types
 import Turbinado.Environment.Request
 
-getHeader :: HeaderName -> Controller (Maybe String)
-getHeader h = do e <- get
+getHeader :: (HasEnvironment m) => HeaderName -> m (Maybe String)
+getHeader h = do e <- getEnvironment
                  return $ findHeader h (fromJust $ getRequest e)
 
 

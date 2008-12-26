@@ -47,11 +47,11 @@ import Control.Monad.Trans
 
 import Turbinado.Environment.Types
 
-setMimeTypes :: MonadState Environment (mt Environment IO) => MimeTypes -> mt Environment IO ()
-setMimeTypes mi = do e <- get
-                     put $ e {getMimeTypes = Just mi}
+setMimeTypes :: (HasEnvironment m) => MimeTypes -> m ()
+setMimeTypes mi = do e <- getEnvironment
+                     setEnvironment $ e {getMimeTypes = Just mi}
 
-addMimeTypesToEnvironment :: (MonadState Environment (mt Environment IO), MonadIO (mt Environment IO)) => FilePath -> mt Environment IO ()
+addMimeTypesToEnvironment :: (HasEnvironment m) => FilePath -> m ()
 addMimeTypesToEnvironment mime_types_file =
     do stuff <- liftIO $ readFile mime_types_file
        setMimeTypes (MimeTypes $ Map.fromList (parseMimeTypes stuff))

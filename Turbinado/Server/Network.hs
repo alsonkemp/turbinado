@@ -18,7 +18,7 @@ import Network.HTTP
 
 receiveRequest :: Socket -> Controller ()
 receiveRequest sock = do
-        req <- doIO $ receiveHTTP sock
+        req <- liftIO $ receiveHTTP sock
         case req of
          Left _ -> throwTurbinado $ BadRequest "Looks as though we've got a bad request, sir"
          Right r  -> do e <- get

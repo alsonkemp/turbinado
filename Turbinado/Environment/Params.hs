@@ -8,28 +8,27 @@ import Network.HTTP
 import Network.HTTP.Headers
 import Network.URI
 
-import Turbinado.Controller.Monad
 import Turbinado.Environment.Header
 import Turbinado.Environment.Request
 import Turbinado.Environment.Types
 
-getParam_u :: String -> Controller String
+getParam_u :: (HasEnvironment m) => String -> m String
 getParam_u p =  do r <- getParam p
                    return $ fromJust r
 
-getParam :: String -> Controller (Maybe String)
+getParam :: (HasEnvironment m) => String -> m (Maybe String)
 getParam p = do r <- getParamFromQueryString p
                 case r of
                   Just r' -> return r
                   Nothing -> getParamFromBody p
                 
-getParamFromQueryString :: String -> Controller (Maybe String)
-getParamFromQueryString s = do e <- get
+getParamFromQueryString :: (HasEnvironment m) => String -> m (Maybe String)
+getParamFromQueryString s = do e <- getEnvironment
                                let qs = uriQuery $ rqURI (fromJust $ getRequest e)
                                return $ lookup s $ formDecode qs
 
-getParamFromBody :: String -> Controller (Maybe String)
-getParamFromBody s = do e <- get
+getParamFromBody :: (HasEnvironment m) => String -> m (Maybe String)
+getParamFromBody s = do e <- getEnvironment
                         ct <- getHeader HdrContentType
                         let rm = rqMethod (fromJust $ getRequest e)
                             rb = rqBody   (fromJust $ getRequest e)

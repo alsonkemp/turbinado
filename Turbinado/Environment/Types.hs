@@ -16,6 +16,10 @@ import Config.Master
 import System.Time
 import System.Plugins
 
+class (MonadIO m) => HasEnvironment m where
+  getEnvironment :: m Environment
+  setEnvironment :: Environment -> m ()
+
 -- Stuffing all Environment "types" into this file to avoid
 -- recursive imports...
 
@@ -50,16 +54,19 @@ newEnvironment = Environment { getCodeStore      = Nothing
 -- * Types for CodeStore
 --
 
-data CodeType = CTView | CTController | CTLayout
+data CodeType = CTView | CTController | CTComponentView | CTComponentController | CTLayout deriving (Show)
 type CodeDate      = ClockTime
 type Function      = String
 type CodeLocation  = (FilePath, Function)
 
 data CodeStore  = CodeStore (MVar CodeMap)
 type CodeMap    = M.Map CodeLocation CodeStatus
-data CodeStatus = CodeLoadFailure String |
+data CodeStatus = CodeLoadMissing |
+                  CodeLoadFailure String |
                   CodeLoadController (StateT Environment IO ()) Module CodeDate |
-                  CodeLoadView       (XMLGenT (StateT Environment IO) XML     ) Module CodeDate
+                  CodeLoadView                (XMLGenT (StateT Environment IO) XML     ) Module CodeDate |
+                  CodeLoadComponentController (StateT Environment IO ())                 Module CodeDate |
+                  CodeLoadComponentView       (XMLGenT (StateT Environment IO) XML     ) Module CodeDate
 
 --
 -- * Types for Database

@@ -15,9 +15,9 @@ import Turbinado.Environment.Settings
 import Turbinado.View
 
 insertView :: View XML
-insertView = do cl <- lift getView
-                lift $ debugM $ "    Layout: insertView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
-                c <- lift $ retrieveCode CTView cl
+insertView = do cl <- getView
+                debugM $ "    Layout: insertView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
+                c <- retrieveCode CTView cl
                 case c of
                   CodeLoadView       v _ _ -> v 
                   CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"

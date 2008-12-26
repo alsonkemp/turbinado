@@ -5,13 +5,13 @@ module Turbinado.View.Monad (
         get,
         put,
         -- * Functions
-        doIO, catch
+        liftIO, catch
         ) where
 
 import Control.Exception (catchDyn)
 
 import Control.Monad.State
-import Control.Monad.Trans (MonadIO(..))
+import Control.Monad.Trans (MonadIO(..), liftIO)
 import Data.Maybe
 import HSX.XMLGenerator (XMLGenT(..), unXMLGenT)
 import qualified Network.HTTP as HTTP
@@ -33,6 +33,18 @@ type View =  ViewT IO
 type ViewT' m = StateT Environment m
 type ViewT  m = XMLGenT (ViewT' m)
 
+instance HasEnvironment View where
+  getEnvironment = lift get
+  setEnvironment = lift . put
+
+
+getEnvironment :: View Environment
+getEnvironment = lift get
+
+setEnvironment :: Environment -> View ()
+setEnvironment e = lift $ put e
+
+
 -- do NOT export this in the final version
 dummyEnv = undefined
 
@@ -43,10 +55,6 @@ runView p e = runStateT  (unXMLGenT p) e
 
 runViewT ::  ViewT IO a -> Environment -> IO (a, Environment)
 runViewT = runStateT . unXMLGenT
-
--- | Execute an IO computation within the View monad.
-doIO :: IO a -> View a
-doIO = liftIO
 
 -----------------------------------------------------------------------
 -- Exception handling

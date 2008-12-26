@@ -16,9 +16,9 @@ import System.Time
 import System.Locale
 
 
-setResponse :: MonadState Environment (mt Environment IO) => HTTP.Response -> mt Environment IO ()
-setResponse resp = do e <- get
-                      put $ e {getResponse = Just resp}
+setResponse :: (HasEnvironment m) => HTTP.Response -> m ()
+setResponse resp = do e <- getEnvironment
+                      setEnvironment $ e {getResponse = Just resp}
 
 isResponseComplete :: Environment -> Bool
 isResponseComplete e =  case (getResponse e) of

@@ -66,9 +66,13 @@ main =
 startServer :: PortNumber -> IO ()
 startServer pnr
     = withSocketsDo $ 
-      do e <- runController (sequence_ [ addLoggerToEnvironment
+      do e <- runController 
+               (sequence_ $ [ addLoggerToEnvironment
                                        , addCodeStoreToEnvironment
-                                       , addMimeTypesToEnvironment "Config/mime.types"]) newEnvironment
+                            , addMimeTypesToEnvironment "Config/mime.types"]
+                            ++ customSetupFilters
+               ) 
+               newEnvironment
          sock <- listenOn $ PortNumber pnr
          workerPoolMVar <- newMVar $ WorkerPool 0 [] []
          mainLoop sock workerPoolMVar e
@@ -108,7 +112,7 @@ handleRequest sock e
                                          , addRoutesToEnvironment ]) e
           case (isResponseComplete e') of
             True  -> sendResponse sock e'
-            False -> do e'' <- requestHandler e'
+            False -> do e'' <- runController requestHandler e'
                         sendResponse sock e''
       ) 
         `catchTurbinado` (\ex -> handleTurbinado sock ex e)
@@ -127,6 +131,7 @@ data WorkerPool = WorkerPool { numWorkers :: Int,
                                idleWorkers :: [WorkerThread],
                                busyWorkers :: [(WorkerThread, ExpiresTime)]}
 
+-- TODO: add a Maximum # of threads
 --getWorkerThread :: MVar WorkerPool -> IO WorkerThread
 getWorkerThread mv e = 
   do wp <- takeMVar mv

@@ -25,7 +25,7 @@ import Config.Master
 tryStaticContent :: Controller ()
 tryStaticContent = 
   do e <- get
-     cDir <- doIO $ getCurrentDirectory
+     cDir <- liftIO $ getCurrentDirectory
      let mt      = fromJust $ getMimeTypes e
          rq      = fromJust $ getRequest e
          f       = drop 1 $ uriPath $ rqURI rq
@@ -36,9 +36,9 @@ tryStaticContent =
      sequence_ $ map (tryToGetStaticContent mt) trydirs
 
 tryToGetStaticContent :: MimeTypes -> FilePath -> Controller ()
-tryToGetStaticContent mt p = do exist <- doIO $ doesFileExist p
+tryToGetStaticContent mt p = do exist <- liftIO $ doesFileExist p
                                 case exist of
                                     False -> return ()
-                                    True -> do f <- doIO $ readFile p
+                                    True -> do f <- liftIO $ readFile p
                                                let ct = maybe "text/html" (show) (mimeTypeOf mt p)
                                                cachedContentResponse 600 ct f

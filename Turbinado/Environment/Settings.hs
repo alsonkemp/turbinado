@@ -19,44 +19,44 @@ import System.FilePath
 import Turbinado.Environment.Types
 import Turbinado.Controller.Monad
 
-addSettingsToEnvironment :: Controller ()
-addSettingsToEnvironment  = do e <- get
-                               put $ e {getSettings = Just $ M.fromList defaultSettings }
+addSettingsToEnvironment :: (HasEnvironment m) => m ()
+addSettingsToEnvironment  = do e <- getEnvironment
+                               setEnvironment $ e {getSettings = Just $ M.fromList defaultSettings }
 
 ------------------------------------------------------------------
 -- Set/Get an individual settting
 ------------------------------------------------------------------
-getSetting :: Typeable a => String -> Controller (Maybe a)
-getSetting s = do e <- get
+getSetting :: (HasEnvironment m, Typeable a) => String -> m (Maybe a)
+getSetting s = do e <- getEnvironment
                   return $ maybe Nothing (fromDynamic) ( M.lookup s (fromJust $ getSettings e) )
 
 getSetting_u s =  getSetting s >>= \v -> return (fromJust v)
 
-setSetting :: (Typeable a) => String -> a -> Controller ()
-setSetting k v = do e <- get
-                    put $ e { getSettings = Just (M.insert k (toDyn v) (fromJust $ getSettings e))}
+setSetting :: (HasEnvironment m, Typeable a) => String -> a -> m ()
+setSetting k v = do e <- getEnvironment
+                    setEnvironment $ e { getSettings = Just (M.insert k (toDyn v) (fromJust $ getSettings e))}
 
 defaultSettings = [ ("layout", toDyn "Default") ]
 
 ------------------------------------------------------------------
 -- Shorthands
 ------------------------------------------------------------------
-getController :: Controller (FilePath, String)
-getController = do e <- get
+getController :: (HasEnvironment m) => m (FilePath, String)
+getController = do e <- getEnvironment
                    c <- getSetting "controller"
                    a <- getSetting "action"
                    return $ (fromJust c,
                              actionName $ fromJust a)
                                where actionName s = (toLower $ head s) : (tail s)
 
-clearLayout :: Controller ()
+clearLayout :: (HasEnvironment m) => m ()
 clearLayout = setSetting "layout" ""
 
-getLayout :: Controller (FilePath, String)
-getLayout = (\l -> return (fromJust l, "page")) =<< getSetting "layout"
+getLayout :: (HasEnvironment m) => m (FilePath, String)
+getLayout = (\l -> return (fromJust l, "markup")) =<< getSetting "layout"
 
-getView :: Controller (FilePath, String)
+getView :: (HasEnvironment m) => m (FilePath, String)
 getView = do c <- getSetting_u "controller"
              a <- getSetting_u "action"
-             return (joinPath $ map normalise [c,a], "page")
+             return (joinPath $ map normalise [c,a], "markup")
 

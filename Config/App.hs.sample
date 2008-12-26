@@ -5,6 +5,7 @@ module Config.App (
   newAppEnvironment,
   databaseConnection,
   Connection,
+  customSetupFilters,
   customPreFilters,
   customPostFilters,
   logLevel
@@ -34,6 +35,7 @@ databaseConnection = Just $ connectPostgreSQL "host=localhost dbname=turbinado u
 ----------------------------------------------------------------
 -- RequestHandler Filter List additions
 ----------------------------------------------------------------
+customSetupFilters  = []
 customPreFilters  = []
 customPostFilters = []
 

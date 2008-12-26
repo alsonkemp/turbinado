@@ -18,10 +18,10 @@ import Turbinado.Controller.Monad
 import Turbinado.Environment.Types
 
 
-addDatabaseToEnvironment :: Controller ()
-addDatabaseToEnvironment = do e <- get
+addDatabaseToEnvironment :: (HasEnvironment m) => m ()
+addDatabaseToEnvironment = do e <- getEnvironment
                               case databaseConnection of
                                 Nothing   -> return ()
-                                Just conn -> do c <- doIO $ conn 
-                                                put $ e {getDatabase = Just c}
+                                Just conn -> do c <- liftIO $ conn 
+                                                setEnvironment $ e {getDatabase = Just c}
 

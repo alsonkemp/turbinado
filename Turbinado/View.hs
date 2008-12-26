@@ -3,13 +3,12 @@ module Turbinado.View (
         setEnvironment,
         evalView,
         defaultContentType,
-        modifyEnvironment,
         -- limited export from Turbinado.View.Monad
         View, ViewT, ViewT',
         runView, runViewT,
-        get, put,
         -- * Functions
-        doIO, catch,
+        liftIO, catch,
+        insertComponent,
 
         -- Module Exports
         module Turbinado.View.HTML,
@@ -29,6 +28,7 @@ import Control.Exception (catchDyn)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans (MonadIO(..))
+import Data.Char
 import Data.List
 import Data.Maybe
 import qualified Network.HTTP as HTTP
@@ -38,6 +38,7 @@ import System.FilePath
 
 import Turbinado.Controller.Monad hiding (catch)
 import Turbinado.Environment.CodeStore
+import Turbinado.Environment.Logger
 import Turbinado.Environment.Params
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
@@ -47,64 +48,48 @@ import Turbinado.Environment.ViewData
 import Turbinado.Server.StandardResponse
 import Turbinado.View.Exception
 import Turbinado.View.HTML
-import Turbinado.View.Monad hiding (doIO)
+import Turbinado.View.Monad hiding (liftIO)
 import Turbinado.View.XML hiding (Name)
 import Turbinado.View.XML.PCDATA
 import Turbinado.View.XMLGenerator
 import Turbinado.Utility.General
 
-
-evalView :: View XML -> Controller ()
-evalView p = do e <- get
-                (x, e') <- doIO $ runView p e
+evalView :: (HasEnvironment m) => View XML -> m ()
+evalView p = do e <- getEnvironment
+                (x, e') <- liftIO $ runView p e
                 pageResponse [] $ renderAsHTML x
 
 defaultContentType :: String
 defaultContentType = "text/html; charset=ISO-8859-1"
 
---
--- * Environment functions
---
+insertComponent :: String -> String -> [(String, String)] -> View XML
+insertComponent controller action opts =
+           do debugM $ " insertComponent: Starting"
+              p <- retrieveCode CTComponentController (controller,  (toLower $ head action) : (tail action))
+              case p of
+                 CodeLoadMissing                    ->    return $ cdata $ "insertComponent error: code missing : " ++ controller ++ " - " ++ action
+                 CodeLoadFailure e                  ->    return $ cdata $ "insertComponent error: " ++ e
+                 CodeLoadComponentController p' _ _ -> do oldE <- getEnvironment
+                                                          mapM_ (\(k, v) -> setSetting k v) opts
+                                                          lift $ p'
+                                                          -- allow for overloading of the Component Controller and View
+                                                          c <- getSetting "component-controller"
+                                                          a <- getSetting "component-view"
+                                                          insertComponentView oldE (fromMaybe controller c) (fromMaybe action a)
+                 _                                  ->    return $ cdata $ "insertComponent error: received incorrect CodeStatus"
 
-getEnvironment :: View Environment
-getEnvironment = lift get
-
-setEnvironment :: Environment -> View ()
-setEnvironment e = lift $ put e
-
-modifyEnvironment :: (Environment -> Environment) -> View ()
-modifyEnvironment =  lift . modify
-
---
--- * Header functions
---
-
---
--- * Cookie functions
---
-
-{-
--- | Get the value of a cookie.
-getCookie :: String           -- ^ The name of the cookie.
-          -> View (Maybe String) -- ^ 'Nothing' if the cookie does not exist.
-getCookie name = getRequest >>= \r -> return $ Cookie.findCookie name 
-                        (fromMaybe "" $ HTTP.lookupHeader HTTP.HdrCookie (HTTP.rqHeaders $ httpRequest r))
-
--- | Same as 'getCookie', but tries to read the value to the desired type.
-readCookie :: (Read a) =>
-              String       -- ^ The name of the cookie.
-           -> View (Maybe a)  -- ^ 'Nothing' if the cookie does not exist
-                           --   or if the value could not be interpreted
-                           --   at the desired type.
-readCookie = liftM (>>= maybeRead) . getCookie
-
--- | Set a cookie.
-setCookie :: Cookie.Cookie -> View HTTP.Response
-setCookie c = getResponse >>= return . HTTP.replaceHeader HTTP.HdrSetCookie (Cookie.showCookie c)
-                                                           
--- | Delete a cookie from the client
-deleteCookie :: Cookie.Cookie -> View HTTP.Response
-deleteCookie = setCookie . Cookie.deleteCookie
--}
-
+insertComponentView :: Environment -> String -> String -> View XML
+insertComponentView oldE controller action =
+           do debugM $ " insertComponentView: Starting"
+              v  <- retrieveCode CTComponentView (joinPath [controller, action], "markup")
+              case v of
+                 CodeLoadMissing                    -> do setEnvironment oldE
+                                                          return $ cdata $ "insertComponentView error: code missing : " ++ (joinPath [controller, action]) ++ " - markup"
+                 CodeLoadFailure e                  -> do setEnvironment oldE
+                                                          return $ cdata $ "insertComponentView error: " ++ e
+                 CodeLoadComponentView v' _ _ -> do res <- v'
+                                                    setEnvironment oldE
+                                                    return res
+                 _                            -> do setEnvironment oldE
+                                                    return $ cdata $ "insertComponentView error"
 

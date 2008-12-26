@@ -26,45 +26,45 @@ import Turbinado.Controller.Monad
 instance Eq Header where
   (==) (Header hn1 _) (Header hn2 _) = hn1 == hn2
 
-fileNotFoundResponse :: FilePath -> Controller ()
+fileNotFoundResponse :: (HasEnvironment m) => FilePath -> m ()
 fileNotFoundResponse fp = 
-     do t <- doIO $ getClockTime
+     do t <- liftIO $ getClockTime
         setResponse (Response (4,0,0) 
                      "File Not Found" 
                      (buildHeaders (Just $ length body) t []) 
                      (body))
   where body = "<html><body>\n <p><big>404 File Not Found</big></p>\n <p>Requested resource: "++ fp ++ "</p>\n </body></html>"
 
-cachedContentResponse :: Int -> String -> String -> Controller ()
+cachedContentResponse :: (HasEnvironment m) => Int -> String -> String -> m ()
 cachedContentResponse age ct body =
-     do t <- doIO $ getClockTime
+     do t <- liftIO $ getClockTime
         pageResponse (buildHeaders 
                         Nothing t
                         [Header HdrCacheControl $ "max-age=" ++ (show age) ++ ", public"
                         , Header HdrContentType ct])
                      body
 
-pageResponse :: [Header] -> String -> Controller ()
+pageResponse :: (HasEnvironment m) => [Header] -> String -> m ()
 pageResponse hds body =
-     do t <- doIO $ getClockTime
+     do t <- liftIO $ getClockTime
         setResponse (Response stSuccess "OK" 
         	(buildHeaders (Just $ length body) t hds) (body))
 
-redirectResponse :: String -> Controller ()
+redirectResponse :: (HasEnvironment m) => String -> m ()
 redirectResponse l =
-     do t <- doIO $ getClockTime
+     do t <- liftIO $ getClockTime
         setResponse (Response (3,0,2) "OK" (buildHeaders Nothing t [Header HdrLocation l]) "")
 
-errorResponse :: String -> Controller ()
+errorResponse :: (HasEnvironment m) => String -> m ()
 errorResponse err = 
-     do t <- doIO $ getClockTime
+     do t <- liftIO $ getClockTime
         setResponse (Response stError "Internal Server Error"
          	(buildHeaders (Just $ length body) t []) (body))
   where body = "<html><body>\n <p><big>500 Internal Server Error</big></p>\n <p>Error specification:<br/>\n" ++ err ++ "</p>\n </body></html>"
 
-badReqResponse :: Controller ()
+badReqResponse :: (HasEnvironment m) => m ()
 badReqResponse =
-     do t <- doIO $ getClockTime
+     do t <- liftIO $ getClockTime
         setResponse (Response stBadReq "Bad Request"
         	(buildHeaders (Just $ length body) t []) body)
   where body = "<html><body>\n  <p><big>400 Bad Request</big></p>\n  </body></html>"

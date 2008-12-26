@@ -46,11 +46,8 @@ preFilters = [Routes.runRoutes ]
 postFilters :: [Controller ()]
 postFilters = []
 
-requestHandler :: Environment -> IO Environment
-requestHandler e = runController requestHandler' e
-
-requestHandler' :: Controller ()
-requestHandler' = do
+requestHandler :: Controller ()
+requestHandler = do
           debugM $ " requestHandler : running pre and main filters"
           -- Run the Pre filters, the page
           sequence_ $ preFilters ++
@@ -65,15 +62,13 @@ requestHandler' = do
 retrieveAndRunController :: Controller ()
 retrieveAndRunController =
            do debugM $ " retrieveAndRunController : Starting"
-              c <- getSetting_u "controller"
-              a <- getSetting_u "action"
-              debugM $ " retrieveAndRunController : " ++ c ++ " : " ++ a
               co <- getController
               p  <- retrieveCode CTController co
               case p of
                  CodeLoadController p' _ _ -> p'
-                 CodeLoadView       _  _ _ -> error "retrieveAndRunView called, but returned CodeLoadView"
                  CodeLoadFailure    e      -> errorResponse e
+                 CodeLoadView       _  _ _ -> error "retrieveAndRunController: retrieveCode called, but returned CodeLoadView"
+                 CodeLoadMissing           -> error "retrieveAndRunController: retrieveCode called, but returned CodeLoadMissing"
 
 retrieveAndRunLayout :: Controller ()
 retrieveAndRunLayout =
@@ -87,7 +82,8 @@ retrieveAndRunLayout =
                                      _       ->    retrieveCode CTLayout l
                             case p of
                               CodeLoadView       p' _ _ -> evalView p'
-                              CodeLoadController _  _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
                               CodeLoadFailure    e      -> errorResponse e
+                              CodeLoadController _  _ _ -> error "retrieveAndRunView: retrieveCode called, but returned CodeLoadController"
+                              CodeLoadMissing           -> error "retrieveAndRunView: retrieveCode called, but returned CodeLoadMissing"
 
 

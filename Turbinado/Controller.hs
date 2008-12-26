@@ -2,9 +2,8 @@ module Turbinado.Controller (
         -- limited export from Turbinado.Controller.Monad
         Controller,
         runController,
-        get, put,
         -- * Functions
-        doIO, catch,
+        liftIO, catch,
 
         redirectTo,
         -- * Database
@@ -67,15 +66,15 @@ redirectTo l = redirectResponse l
 quickQuery :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
 quickQuery s vs = do e <- get
                      let c = fromJust $ getDatabase e
-                     doIO $ HDBC.handleSqlError $ HDBC.quickQuery c s vs
+                     liftIO $ HDBC.handleSqlError $ HDBC.quickQuery c s vs
 
 quickQuery' :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
 quickQuery' s vs = do e <- get
                       let c = fromJust $ getDatabase e
-                      doIO $ HDBC.handleSqlError $ HDBC.quickQuery' c s vs
+                      liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' c s vs
 
 run :: String -> [HDBC.SqlValue] -> Controller Integer
 run s vs    = do e <- get
                  let c = fromJust $ getDatabase e
-                 doIO $ HDBC.handleSqlError $  HDBC.run c s vs
+                 liftIO $ HDBC.handleSqlError $  HDBC.run c s vs
 
