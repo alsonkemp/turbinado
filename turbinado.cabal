@@ -8,15 +8,35 @@ Author:              Alson Kemp
 Maintainer:          Alson Kemp (alson@alsonkemp.com)
 Homepage:            http://www.turbinado.org
 Build-Type:          Simple
+Cabal-Version:          >= 1.2
 
 Executable trhaml
   Main-is:             Turbinado/View/HAML/trhaml.hs
-  Build-Depends:       base, parsec
+  Build-Depends:       base  < 4.0,
+                       parsec 
   ghc-options:  -O
 
 Executable turbinado
   Main-is:             Turbinado/Server.hs
-  Build-Depends:       base, bytestring, containers, directory, filepath, harp, HDBC, HDBC-postgresql, hslogger, hsx, HTTP, mtl, network, old-locale, old-time, parsec, plugins, pretty, regex-compat, time
+  Build-Depends:       base <4.0, 
+                       containers, 
+                       directory, 
+                       filepath, 
+                       harp == 0.4, 
+                       HDBC, 
+                       HDBC-postgresql, 
+                       hslogger, 
+                       hsx == 0.4.5, 
+                       HTTP < 4000, 
+                       mtl, 
+                       network, 
+                       old-locale, 
+                       old-time, 
+                       parsec, 
+                       plugins, 
+                       pretty, 
+                       regex-compat, 
+                       time
   ghc-options: -F -pgmFtrhsx -O
   Extensions: MultiParamTypeClasses,
             FunctionalDependencies,

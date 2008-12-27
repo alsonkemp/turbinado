@@ -81,9 +81,9 @@ checkReloadCode ct cmap cstat cl = do
         (False, _)    -> do debugM $ "    CodeStore : checkReloadCode : Code missing"
                             return $ insert cl CodeLoadMissing cmap
         (True, False) -> do debugM $ "    CodeStore : checkReloadCode : No reload neeeded"
-                    return cmap
+                            return cmap
         (True, True)  -> do debugM $ "    CodeStore : checkReloadCode : Need reload"
-                    loadCode ct cmap cl
+                            loadCode ct cmap cl
 
         
 -- The beast
@@ -123,7 +123,7 @@ makeCode ct cmap cl args fp = do
                                       CTLayout                -> _loadView ct cmap cl fp
                                       CTView                  -> _loadView ct cmap cl fp
                                       CTComponentView         -> _loadView ct cmap cl fp
-                                      CTController -> _loadController ct cmap cl fp
+                                      CTController            -> _loadController ct cmap cl fp
                                       CTComponentController   -> _loadController ct cmap cl fp
 
 _loadView :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> FilePath -> m CodeMap
@@ -156,7 +156,7 @@ _loadController ct cmap cl fp = do
                                 CTController          -> return (insert cl (CodeLoadController f m t) cmap)
                                 CTComponentController -> return (insert cl (CodeLoadComponentController f m t) cmap)
                                 _                     -> error $ "_loadController: passed an invalid CodeType (" ++ (show ct) ++ ")"
-
+                              
 
 -------------------------------------------------------------------------------------------------
 -- Utility functions
@@ -197,22 +197,19 @@ needReloadCode fp fd = do
                    return $ (True, mt > fd)
         False-> return (False, True)
 
-snd' :: (a, b, c) -> b
-snd' (a,b,c) = b
-
 getDir :: CodeType -> FilePath
 getDir ct = case ct of
-  CTLayout     -> layoutDir
-  CTController -> controllerDir
-  CTView       -> viewDir
+  CTLayout         -> layoutDir
+  CTController     -> controllerDir
+  CTView           -> viewDir
   CTComponentController -> componentControllerDir
   CTComponentView       -> componentViewDir
 
 getStub :: CodeType -> FilePath
 getStub ct = case ct of
-  CTLayout     -> layoutStub
-  CTController -> controllerStub
-  CTView       -> viewStub
+  CTLayout         -> layoutStub
+  CTController     -> controllerStub
+  CTView           -> viewStub
   CTComponentController -> controllerStub
   CTComponentView       -> viewStub
 

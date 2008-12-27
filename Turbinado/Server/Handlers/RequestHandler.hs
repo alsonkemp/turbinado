@@ -53,7 +53,7 @@ requestHandler = do
           sequence_ $ preFilters ++
                       customPreFilters ++
                       [ retrieveAndRunController
-                      , retrieveAndRunLayout 
+                      , retrieveAndRunLayout
                       ] 
           debugM $ " requestHandler : running post filters"
           sequence_ (customPostFilters ++ postFilters)
@@ -72,7 +72,7 @@ retrieveAndRunController =
 
 retrieveAndRunLayout :: Controller ()
 retrieveAndRunLayout =
-           do e <- get
+           do e <- getEnvironment
               case (isResponseComplete e) of
                 True -> return ()
                 False -> do l <- getLayout

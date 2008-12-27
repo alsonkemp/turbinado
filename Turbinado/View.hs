@@ -1,6 +1,4 @@
 module Turbinado.View (
-        getEnvironment,
-        setEnvironment,
         evalView,
         defaultContentType,
         -- limited export from Turbinado.View.Monad
