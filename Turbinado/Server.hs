@@ -68,7 +68,7 @@ startServer pnr
     = withSocketsDo $ 
       do e <- runController 
                (sequence_ $ [ addLoggerToEnvironment
-                                       , addCodeStoreToEnvironment
+                            , addCodeStoreToEnvironment
                             , addMimeTypesToEnvironment "Config/mime.types"]
                             ++ customSetupFilters
                ) 

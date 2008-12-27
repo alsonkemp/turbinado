@@ -63,7 +63,7 @@ data CodeStore  = CodeStore (MVar CodeMap)
 type CodeMap    = M.Map CodeLocation CodeStatus
 data CodeStatus = CodeLoadMissing |
                   CodeLoadFailure String |
-                  CodeLoadController (StateT Environment IO ()) Module CodeDate |
+                  CodeLoadController          (StateT Environment IO ())                 Module CodeDate |
                   CodeLoadView                (XMLGenT (StateT Environment IO) XML     ) Module CodeDate |
                   CodeLoadComponentController (StateT Environment IO ())                 Module CodeDate |
                   CodeLoadComponentView       (XMLGenT (StateT Environment IO) XML     ) Module CodeDate

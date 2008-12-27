@@ -60,6 +60,25 @@ evalView p = do e <- getEnvironment
 defaultContentType :: String
 defaultContentType = "text/html; charset=ISO-8859-1"
 
+insertDefaultView :: View XML
+insertDefaultView = 
+             do cl <- getView
+                debugM $ "    Layout: insertDefaultView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
+                c <- retrieveCode CTView cl
+                case c of
+                  CodeLoadView       v _ _ -> v 
+                  CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                  CodeLoadFailure    e     -> return $ cdata e
+
+insertView :: String -> String -> View XML
+insertView c a = 
+             do debugM $ "    Layout: insertView : loading   " ++ c ++ " - " ++ a
+                c <- retrieveCode CTView (c, (toLower (head a)):(tail a))
+                case c of
+                  CodeLoadView       v _ _ -> v 
+                  CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                  CodeLoadFailure    e     -> return $ cdata e
+ 
 insertComponent :: String -> String -> [(String, String)] -> View XML
 insertComponent controller action opts =
            do debugM $ " insertComponent: Starting"
