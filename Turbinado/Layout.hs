@@ -1,8 +1,8 @@
 module Turbinado.Layout (
-  insertView,
   styleSheet,
   javaScript,
-  googleAnalytics
+  googleAnalytics,
+  module Turbinado.View
   ) where
 import Control.Monad.State
 import Control.Monad.Trans
@@ -14,15 +14,6 @@ import Turbinado.Environment.Logger
 import Turbinado.Environment.Settings
 import Turbinado.View
 
-insertView :: View XML
-insertView = do cl <- getView
-                debugM $ "    Layout: insertView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
-                c <- retrieveCode CTView cl
-                case c of
-                  CodeLoadView       v _ _ -> v 
-                  CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                  CodeLoadFailure    e     -> return $ cdata e
-                  
 styleSheet :: String -> String -> View XML
 styleSheet s m = return $ cdata $ "<link media=\"" ++ m ++"\" type=\"text/css\" rel=\"stylesheet\" href=\"/css/" ++ s ++".css\">"
 

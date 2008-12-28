@@ -6,6 +6,8 @@ module Turbinado.View (
         runView, runViewT,
         -- * Functions
         liftIO, catch,
+        insertView,
+        insertDefaultView,
         insertComponent,
 
         -- Module Exports
