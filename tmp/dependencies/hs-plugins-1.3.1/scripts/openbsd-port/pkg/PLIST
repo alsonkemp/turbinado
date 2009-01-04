@@ -1,0 +1,28 @@
+@comment $OpenBSD$
+lib/hs-plugins/imports/Plugins.hi
+lib/hs-plugins/imports/Plugins/BinIface.hi
+lib/hs-plugins/imports/Plugins/Binary.hi
+lib/hs-plugins/imports/Plugins/Consts.hi
+lib/hs-plugins/imports/Plugins/Env.hi
+lib/hs-plugins/imports/Plugins/FastMutInt.hi
+lib/hs-plugins/imports/Plugins/FastString.hi
+lib/hs-plugins/imports/Plugins/Iface.hi
+lib/hs-plugins/imports/Plugins/Load.hi
+lib/hs-plugins/imports/Plugins/Make.hi
+lib/hs-plugins/imports/Plugins/Package.hi
+lib/hs-plugins/imports/Plugins/ParsePkgConfLite.hi
+lib/hs-plugins/imports/Plugins/Parser.hi
+lib/hs-plugins/imports/Plugins/PrimPacked.hi
+lib/hs-plugins/imports/Plugins/Utils.hi
+lib/hs-plugins/include/hschooks.h
+lib/hs-plugins/libHSplugins.a
+lib/hs-plugins/libHSplugins_cbits.a
+lib/hs-plugins/plugins.conf.in
+@dirrm lib/hs-plugins/include
+@dirrm lib/hs-plugins/imports/Plugins
+@dirrm lib/hs-plugins/imports
+@dirrm lib/hs-plugins
+@exec /bin/cat %D/lib/hs-plugins/plugins.conf.in | /usr/bin/env PREFIX=%D %D/bin/ghc-pkg -u
+@exec /bin/rm -f %D/lib/ghc-6.2.1/package.conf.old
+@unexec %D/bin/ghc-pkg -r plugins
+@unexec /bin/rm -f %D/lib/ghc-6.2.1/package.conf.old

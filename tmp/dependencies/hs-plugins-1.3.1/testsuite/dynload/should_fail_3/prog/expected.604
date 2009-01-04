@@ -1,0 +1,8 @@
+
+../Plugin.in:18:15:
+    Couldn't match `Dynamic' against `(a, b)'
+      Expected type: Dynamic
+      Inferred type: (a, b)
+    In the definition of `resource_dyn':
+	resource_dyn = (typeOf plugin, unsafeCoerce v)
+a.out: failed

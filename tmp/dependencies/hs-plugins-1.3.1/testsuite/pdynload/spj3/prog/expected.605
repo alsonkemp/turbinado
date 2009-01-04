@@ -1,0 +1,9 @@
+
+../Plugin.hs:5:31:
+    Couldn't match the rigid variable `a' against `Int'
+      `a' is bound by the polymorphic type `forall a. (Num a) => a -> a -> a'
+			at ../Plugin.hs:5:11-56
+      Expected type: a -> a -> a
+      Inferred type: Int -> Int -> Int
+    In the expression: (+) :: Int -> Int -> Int
+    In the `function' field of a record

@@ -1,0 +1,2 @@
+TOP=../../..
+include ../../foreign.mk

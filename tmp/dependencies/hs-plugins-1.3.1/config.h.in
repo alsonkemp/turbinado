@@ -1,0 +1,46 @@
+/* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Defined if compiling with mingw */
+#undef CYGWIN
+
+/* Defined if a debugging version is to be built */
+#undef DEBUG
+
+/* Path to ghc libraries */
+#undef GHC_LIB_PATH
+
+/* Define to 1 if you have the `arc4random' function. */
+#undef HAVE_ARC4RANDOM
+
+/* Whether symbols are prefixed with a leading underscore */
+#undef LEADING_UNDERSCORE
+
+/* Defined if compiling on the mac */
+#undef MACOSX
+
+/* Define to the address where bug reports for this package should be sent. */
+#undef PACKAGE_BUGREPORT
+
+/* Define to the full name of this package. */
+#undef PACKAGE_NAME
+
+/* Define to the full name and version of this package. */
+#undef PACKAGE_STRING
+
+/* Define to the one symbol short name of this package. */
+#undef PACKAGE_TARNAME
+
+/* Define to the version of this package. */
+#undef PACKAGE_VERSION
+
+/* Path to top of build tree */
+#undef TOP
+
+/* Which ghc to use */
+#undef WITH_GHC
+
+/* Defined if hs-plugins is to be built with Niklas Broberg's HSX parser */
+#undef WITH_HSX
+
+/* Defined if compiling with mingw */
+#undef __MINGW32__

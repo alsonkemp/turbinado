@@ -1,0 +1,23 @@
+$ make
+$ ./a.out 
+Compiling plugin ... done
+Loading package base ... linking ... done
+Loading objects API Plugin ... done
+> ?
+"?"
+"quit"
+"clear"
+"filter foo"
+> filter adf adsf
+fsda fda
+> filter asd faSDFADSF
+FSDAFDSaf dsa
+
+-- at this point I edit the plugin and save the source
+
+> filter asfdaSDFASD
+Compiling plugin ... done
+Reloading Plugin ... done
+DSAFDSADFSA
+
+-- it compiled and reloaded it for me. nice.

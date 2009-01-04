@@ -1,0 +1,3 @@
+hmm. on 6.3  we need to add 'mtl' to a package dependency, other
+HSlang complains of a missing symbol. Is this a bug in the
+package.conf for HSlang?

@@ -1,0 +1,5 @@
+created 53 files
+correctly ran out of permutations
+mkstemp:	created 10000 files
+mkstemps:	created 2000 files
+mkdtemp:	created 2000 directories

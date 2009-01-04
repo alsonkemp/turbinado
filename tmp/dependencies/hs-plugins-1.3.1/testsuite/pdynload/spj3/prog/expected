@@ -1,0 +1,8 @@
+
+../Plugin.hs:5:
+    Cannot unify the type-signature variable `a' with the type `Int'
+	Expected type: a -> a -> a
+	Inferred type: Int -> Int -> Int
+    When checking the type signature of the expression:
+	  (+) :: Int -> Int -> Int
+    In the `function' field of a record

@@ -1,0 +1,8 @@
+this is an example of an application that uses the HSConf library to
+dynamically load compiled conf files.
+
+We use the .conf file in the parent directory, and communicate with
+the plugin via the API in the api_package/ directory.
+
+The plugin is a .o file
+The api is a GHC package archive

@@ -1,0 +1,21 @@
+{-# GLOBALOPTIONS -package mtl #-}
+-- illustrates the use of static options in pragmas
+
+import System.IO.Unsafe
+import System.IO
+import System.Process
+
+resource = unsafe { field = date }
+
+-- illustrates the use of the devil's work
+date :: String
+date = unsafePerformIO $ do
+#if !defined(CYGWIN) || !defined(__MINGW32__)
+            (_,outh,_,proc) <- runInteractiveProcess "date" [] Nothing Nothing		
+#else
+            (_,outh,_,proc) <- runInteractiveProcess "@PREFIX@/../../bin/date" [] Nothing Nothing		
+#endif
+    	    waitForProcess proc
+            s <- hGetContents outh
+            return s
+

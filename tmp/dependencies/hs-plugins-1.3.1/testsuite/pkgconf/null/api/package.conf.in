@@ -1,0 +1,18 @@
+Package {
+        name            = "api",
+        auto            = False,
+
+        import_dirs     = [ "${PREFIX}" ],
+        library_dirs    = [ "${PREFIX}" ],
+        hs_libraries    = [ "HSapi" ],
+
+        include_dirs    = [],
+        c_includes      = [],
+        source_dirs     = [],
+        extra_libraries = [],
+        package_deps    = [],
+        extra_ghc_opts  = [],
+        extra_cc_opts   = [],
+        extra_ld_opts   = []
+}
+

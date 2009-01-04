@@ -1,0 +1,19 @@
+--
+-- this is a "stub" file, containing default syntax we don't
+-- want the user to have to write
+--
+-- for example, it constrains the module name and force the API to be
+-- imported
+
+module Plugin ( resource ) where
+
+import StringProcessorAPI
+import Data.Char
+import Data.List
+
+-- this is a default definition of 'resource'. it will be overridden
+-- by anything the user writes. useful for default values
+
+resource :: Interface
+resource = plugin
+

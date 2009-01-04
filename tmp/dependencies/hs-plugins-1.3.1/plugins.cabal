@@ -1,0 +1,53 @@
+name:               plugins
+version:            1.3.1
+homepage:           http://code.haskell.org/~dons/code/hs-plugins
+synopsis:           Dynamic linking for Haskell and C objects
+description:        Dynamic linking and runtime evaluation of Haskell,
+                    and C, including dependency chasing and package resolution.
+                    .
+                    Described in the paper:
+                        /Plugging Haskell In/, <http://www.cse.unsw.edu.au/~dons/papers/PSSC04.html>
+category:           System
+license:            BSD3
+License-file:       LICENSE
+author:             Don Stewart 2004-2008
+maintainer:         Don Stewart <dons@galois.com>
+cabal-version:      >= 1.2
+build-type:         Configure
+extra-source-files: config.guess, config.h.in, config.mk.in, config.sub,
+                    configure, configure.ac, install.sh, Makefile,
+                    testsuite/makewith/io/TestIO.conf.in,
+                    testsuite/makewith/unsafeio/Unsafe.conf.in
+
+library
+    exposed-modules:
+            System.Eval,
+            System.Eval.Haskell,
+            System.Eval.Utils,
+            System.MkTemp,
+            System.Plugins,
+            System.Plugins.Consts,
+            System.Plugins.Env,
+            System.Plugins.Load,
+            System.Plugins.LoadTypes,
+            System.Plugins.Make,
+            System.Plugins.Package,
+            System.Plugins.PackageAPI,
+            System.Plugins.ParsePkgConfCabal,
+            System.Plugins.Parser,
+            System.Plugins.Process,
+            System.Plugins.Utils
+    includes:             Linker.h
+    extensions:           CPP, ForeignFunctionInterface
+    ghc-options:          -Wall -funbox-strict-fields -fno-warn-missing-signatures
+    hs-source-dirs:       src
+    build-depends:        base  >= 3 && < 4,
+                          Cabal >= 1.4 && < 1.5,
+                          haskell-src,
+                          containers,
+                          array,
+                          directory,
+                          random,
+                          process,
+                          ghc >= 6.8
+

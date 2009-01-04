@@ -1,0 +1,13 @@
+
+module Unsafe ( resource, resource_dyn )  where
+
+import API
+import Data.Dynamic
+
+resource = unsafe
+
+--
+-- special
+--
+resource_dyn :: Dynamic
+resource_dyn = toDyn resource

@@ -1,0 +1,111 @@
+
+------------------------------------------------------------------------
+                            hs-plugins
+------------------------------------------------------------------------
+
+Compiler and tool support for compiling and loading, and evaluating
+Haskell at runtime. 
+
+The library provides a convenient interface to GHC's runtime loader
+and linker, letting you load compiled Haskell code. 
+
+It also provides a `make' system for compiling plugin source
+automagically and for combining the user's .hs file with a stub of
+standard declarations and syntax, saving the user from having to write
+standard code themselves.
+
+It provides an `eval' function, for generating new, well-typed, compiled
+code from a Haskell source string.
+
+It also provides a new variation of printf for Haskell-- a runtime
+generated, dynamically-typed printf.
+
+Read the documentation in doc/ for more.
+
+------------------------------------------------------------------------
+
+BUILDING:
+        $ chmod +x Setup.lhs configure
+        $ ./Setup.lhs configure --prefix=/usr/local
+        $ ./Setup.lhs build
+        $ ./Setup.lhs install
+
+------------------------------------------------------------------------
+
+DEPENDENCIES:
+
+* Requires GHC >= 6.4
+* Requires Cabal
+
+------------------------------------------------------------------------
+
+* Optional:
+   If you are doing a lot of `merge'-related operations, and require
+   an extended haskell parser, you can compile hs-plugins to use 
+   HSX, Niklas Broberg's Haskell parser library, available at:
+
+    darcs get http://www.cs.chalmers.se/~d00nibro/haskell-src-exts
+
+   To get hs-plugins to use HSX, use: 
+
+        $ mv plugins.cabal.hsx plugins.cabal
+        $ ./Setup.lhs configure --enable-hsx
+
+   Make sure to install HSX first though :)
+
+------------------------------------------------------------------------
+
+* On cygwin/windows you (a) make sure the cygwin "find" is before the
+  windows "find" on your PATH, and (b) to give the windows-style path
+  (e.g., "c:/cygwin/usr/local") in the ./configure --prefix=foo/bar
+  step
+
+* 'plugs' requires a working readline library.
+
+* If you wish to use TH in plugins, or to run load()-programs in GHCi,
+  you require a patch to GHC's linker, that was committed into ghc
+  6.3, and ghc 6.2 -stable branch, and is available from 6.2.2 onwards.
+
+* If you need to regenerate ./configure you need >= autoreconf-2.53
+
+* The documentation relies on haddock, latex, dvips, tex2page:
+
+        $ cd doc && make
+
+------------------------------------------------------------------------
+
+EXAMPLES:
+
+Have a look in the testsuite/ directory for many examples of how to
+arrange your code.
+
+LICENSE:
+
+This library is distributed under the terms of the LGPL. The runtime
+loader code is based on code written by André Pang, and others, and is
+distributed under the BSD-style Glasgow University license.
+
+PORTABILITY:
+
+Requires GHC 6.4 or greater, though most testing has be done on 6.4.
+The dynamic loader requires a functional GHCi implementation.
+
+---------------------+--------------------------------------------------
+  Platform           |  Works   Should work*    Unknown    Won't work
+---------------------+--------------------------------------------------
+i386-*-linux         |    X
+i386-*-freebsd       |    X
+i386-*-openbsd       |    X           
+powerpc-apple-darwin |    X            
+powerpc-*-linux      |    X            
+sparc-*-solaris2     |    X            
+ia64-*-linux         |    #
+i386-*-solaris2      |                X
+sparc-*-linux        |                X
+sparc-*-openbsd      |                X
+i386-*-netbsd        |                              X 
+amd64-*-openbsd      |                              X
+mips64-sgi-irix      |                                         X
+---------------------+--------------------------------------------------
+
+# .hi file parsing is currently broken

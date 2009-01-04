@@ -1,0 +1,6 @@
+hs-plugins is a library for dynamic loading and compilation of Haskell
+code. It provides typesafe "plugins" for Haskell.  The interface is
+general enough that it can be used to create conventional plugins,
+hmake-like Haskell interpreters embedded in applications, or to script
+an application with Haskell (or a Haskell EDSL) as the extension
+language.

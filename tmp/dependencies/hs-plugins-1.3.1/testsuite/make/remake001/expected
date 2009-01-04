@@ -1,0 +1,4 @@
+MakeSuccess ReComp "Foo.o"
+MakeSuccess NotReq "Foo.o"
+ReComp
+NotReq

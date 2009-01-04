@@ -1,0 +1,12 @@
+{-# OPTIONS -fglasgow-exts #-}
+
+module Plugin ( resource_dyn )  where
+
+import API
+import AltData.Dynamic
+
+resource = plugin
+
+resource_dyn :: Dynamic
+resource_dyn = toDyn resource
+

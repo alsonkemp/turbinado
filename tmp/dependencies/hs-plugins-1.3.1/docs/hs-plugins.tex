@@ -1,0 +1,1804 @@
+\documentclass{article}
+
+\usepackage{url}
+\usepackage{tex2page}
+
+% typeset math as ascii
+\htmlmathstyle{no-in-text-image no-display-image}
+
+% something other than |
+\verbescapechar\&
+
+\cssblock 
+h1      {font-size: 16pt}
+h2      {font-size: 15pt}
+\endcssblock 
+
+% color of verbatim elements
+\cssblock
+.verbatim {color: grey20}
+
+.scheme  .variable  {color: grey20} 
+.scheme  .keyword   {color: navy}
+.scheme  .builtin   {color: maroon}
+\endcssblock
+
+% add some extra keywords
+\scmkeyword{as case class data default deriving do else hiding if}
+\scmkeyword{import in infix infixl infixr instance let module newtype}
+\scmkeyword{of qualified then type where forall \\ }
+\scmbuiltin{: :: = -> <- @ ~ => - >>= >> }
+
+\newcommand{\code}[1]{{\texttt{#1}}}
+\newcommand{\hsplugins}{{\texttt{hs-plugins}}}
+
+\title{hs-plugins\\
+       Dynamically Loaded Haskell Modules}
+
+\author{\urlh{http://www.cse.unsw.edu.au/~dons}{Don Stewart}}
+
+\begin{document}
+
+\maketitle
+
+\medskip
+%
+{\htmlonly \textbf{Download \endhtmlonly 
+\urlh{ftp://ftp.cse.unsw.edu.au/pub/users/dons/hs-plugins/hs-plugins-1.0.tar.gz}
+     {version 1.0}}
+%
+\medskip
+
+\hsplugins{} is a library for loading code written in Haskell into an
+application at runtime, in the form of plugins. It also provides a
+mechanism for (re-)compiling Haskell source at runtime. Thirdly, a
+combination of runtime compilation and dynamic loading provides a set of
+\code{eval} functions-- a form of runtime metaprogramming. Values
+exported by Haskell plugins are transparently available to Haskell host
+applications, and bindings exist to use Haskell dynamically in C, Perl
+and Objective C programs. \hsplugins{} requires GHC 6.4 or later.
+
+\medskip
+
+% grr. double spaced.
+
+\tableofcontents
+
+\newpage
+
+\section{Download}
+
+\begin{itemize}
+
+\item
+Download the latest stable release:\\
+\url{ftp://ftp.cse.unsw.edu.au/pub/users/dons/hs-plugins/hs-plugins-1.0.tar.gz}
+
+\item
+Darcs repository of the latest code:\\
+\url{darcs get http://www.cse.unsw.edu.au/~dons/code/hs-plugins}
+
+\item
+A tarball of the document you are reading:\\
+\url{http://www.cse.unsw.edu.au/~dons/hs-plugins/hs-plugins.html.tar.gz}
+
+\item
+A postscript version of the document you are reading:\\
+\url{http://www.cse.unsw.edu.au/~dons/hs-plugins/hs-plugins.ps.gz}
+
+\item
+Papers:
+\begin{itemize}
+\item A paper on interesting uses of \hsplugins{} to enable Haskell to be used
+as an application extension language:\\
+\url{http://www.cse.unsw.edu.au/~dons/papers/PSSC04.html}
+
+\item
+A paper on dynamic applications in Haskell, utilizing \hsplugins{}:\\
+\url{http://www.cse.unsw.edu.au/~dons/papers/SC05.html}
+\end{itemize}
+
+\end{itemize}
+
+It is known to run on \code{i386-\{linux,freebsd,openbsd\}},
+\code{sparc-solaris2}, \code{powerpc-\{macosx,linux\}} and flavours of
+Windows.
+
+\section{History}
+
+\begin{itemize}
+        \item Jan 2006, v1.0
+        \begin{itemize}
+        \item Cabalised build system
+        \item Behave better on 64 bit platforms
+        \item Haddock documentation of the API.
+        \item A couple of bug fixes
+        \end{itemize}
+
+        \item June 2005, v0.9.10
+        \begin{itemize}
+        \item Support for GHC 6.4, with help from Sean
+                        Seefried for the package.conf parser.
+        \item Ported to Windows of various flavours thanks to Vivian McPhail and Shelarcy
+        \item Removed posix and unix dependencies
+        \item Now uses HSX parser, thanks to Niklas Broberg
+        \item Extended load interface, thanks to Lemmih
+        \item Source now in a darcs repository
+        \item Supports building with GNU make -jN
+        \item Simplified module hierarchy, moved under System.* namespace
+        \item pdynload clarifications, thanks to Alistair Bayley 
+        \item Miscellaneous bug fixes
+        \end{itemize}
+
+	\item February 2005, v0.9.8
+        \begin{itemize}
+		\item Fix bug in .hi parsing. 
+		\item Add reloading of packages. 
+		\item Fix bug in canonical module names 
+                      (fixing problems with "Foo.o" and "./Foo.o"
+		\item Fix for hierarchical names, don't guess them,
+			read them from the .hi file.
+		\item Add new varients of load.
+		\item Fix bug in makeAll, such that dependent module
+			changes were not noticed.
+		\item Add varient of eval:\code{ unsafeEval\_}, returing
+			Either.
+		\item Better, bigger testsuite.
+		\item Better api.
+	\end{itemize}
+
+	\item September 2004.
+        \begin{itemize}
+		\item makeAll
+		\item Better return type for make.
+	\end{itemize}
+
+	\item Mid August 2004, v0.9.6 release.
+        \begin{itemize}
+		\item More portable, thanks to debugging by Niklas Broberg.
+		\item Other small fixes to the interfaces.
+		\item Provides a runtime-generated printf.
+	\end{itemize}
+
+	\item Mid July 2004, added new pdynload strategy.
+
+	\item Mid-June 2004, v0.9.5 release.
+        \begin{itemize}
+		\item dynamic typing is working
+
+		\item static typing of interfaces is working
+
+		\item Adds \code{eval}, and \code{hs\_eval}
+
+		\item bugs fixed.
+        \end{itemize}
+
+        \item Early-June 2004, v0.9.4 release. 
+        \begin{itemize}
+
+                \item Adds a .hi file parser. We use this to work out
+                plugin dependencies directly, meaning no more
+                \code{.dep} files or \code{ghcp}. 
+
+                \item It also adds a package.conf parser, meaning we
+                can properly handle packages that either aren't stored
+                in the normal location, don't have a canonical name,
+                or are found using a -package-conf argument. Thanks to
+                Sean for this work. 
+
+                \item the interface to load() has changed to allow a
+                list of package.conf files to search for packages.
+
+                \item the interace to make() has changed, so that you
+                can get back any stderr output produced during plugin
+                compilation.
+
+                \item It solves a bug whereby a package that is
+                required by another package would not be loaded unless
+                the plugin itself depended on this indirect package.
+
+                \item more stable, more examples.
+        \end{itemize}
+
+        \item May 2004, v0.9.3 released, adding support for dependency
+        conflict resolution between multiple plugins.  Several plugins with
+        shared dependencies can now be safely loaded at once. --prefix is now
+        respected in ./configure.  Thanks to Sean for this patch.
+
+        \item v0.9.2 change licence to LGPL
+
+        \item v0.9.1 expand on the documentation
+
+        \item v0.9   released, initial source release
+
+\end{itemize}
+
+\section{Acknowledgements}
+
+\begin{itemize}
+
+\item Andr\'e Pang's \code{runtime\_loader} was the inspiration and basis
+of the dynamic loader (\url{http://www.algorithm.com.au}).
+\hsplugins{} has benefited from many discussions with him,
+particularly to do with dependency checking and dynamic typing, and
+bug reports. Andr\'e wrote an objective C binding to hs-plugins, and
+helped with the design of eval(). He also fixed GHC so we could load
+the dynamic loader dynamically.
+
+\item Sean Seefried (\url{http://www.cse.unsw.edu.au/~sseefried}) was
+the first user of \hsplugins{} and his code and feedback have helped
+make the library much more useful and powerful.
+
+\item Manuel Chakravarty's \code{take} system provided the basis for
+\code{make}, and helped with several issues to do with safety of
+plugins, apis and the applications that use them.
+Manuel also helped with the design of eval(), and on how to
+successfully evaluate polymorphic functions using rank-N types.
+
+\item Simon Marlow helped with several issues to do with linking and
+loading static and dynamic code, and provided many useful suggestions.
+
+\item Hampus Ram's dynamic loader
+(\url{http://www.dtek.chalmers.se/~d00ram/dynamic/}) provided the
+design of the state maintained by the loader, and for thread safety
+issues relating to this.
+
+\item Shae Erisson provided several insights into more powerful uses
+of the library. Thanks to everyone on \#haskell who provided
+discussion about the library.
+
+\item Malcolm Wallace's \code{hmake} provided some useful insights in
+how to compile Haskell source in a way that makes it appear like an
+interpreter, used in the interactive environment: \code{plugs}.
+
+\item Niklas Broberg helped a lot by testing, and providing feedback for
+the new make and load API. Thanks Niklas.
+
+\item Finally, thanks to everyone who has worked on GHC and its
+libraries: for GHCi, the .hi interface parser, the package system, and
+all the other code the \hsplugins{} depends on.
+
+\end{itemize}
+
+\newpage
+
+\section{Overview}
+
+\hsplugins{} is a library for compiling and loading Haskell code into a
+program at runtime. It allows you to write Haskell code (which may
+be spread over multiple modules), and have an application (implemented in
+any language with a Haskell FFI binding, including Haskell) load and use
+your code at runtime.
+
+\hsplugins{} provides 3 major features:
+%
+\begin{itemize}
+        \item a dynamic loader,
+        \item a compilation manager, and
+        \item a Haskell evaluator
+\end{itemize}
+
+The \emph{dynamic loader} loads objects into the address space of an
+application, along with any dependencies the plugin may have. The
+loader is a binding to the GHC runtime system's dynamic linker, which
+does single object loading. GHC also performs the necessary linking of
+new objects into the running process. On top of the GHC loader is a
+Haskell layer that arranges for module and package dependencies to be
+found prior to loading individual modules.
+
+The \emph{compilation manager} is a \code{make}-like system for
+compiling Haskell source code into a form suitable for loading.  While
+plugins are normally thought of as strictly object code, there are a
+variety of scenarios where it is desirable to be able to inspect the
+source code of a plugin, or to be able to recompile a plugin at runtime.
+The compilation manager fills this role. It is particularly useful in
+the implementation of \code{eval}.
+
+The \emph{evaluator}, \code{eval}, utilizes the loader and compilation
+manager. When passed a string containing a Haskell expression, it
+compiles the string to object code, loads the result, and returns a
+Haskell value representing the compiled string to the caller. It can be
+considered a Haskell interpreter, implemented as a library, and can be
+used to embed Haskell evaluation facilities in an application.
+
+\section{Dynamic Loader}
+
+The interface to the \hsplugins{} library can be divided into a number
+of sections representing the functional units of the library.
+Additionally, depending on the level of trust the application places
+in the plugins, a variety of additional checks can be made on the
+plugin as it is loaded. The levels of type safety possible are
+summarised at the end of Section \ref{sec:compilation-manger} section.
+The dynamic loader is available by using \code{-package plugins}.
+
+\subsection*{Interface}
+%
+\begin{quote}
+\scm{
+import System.Plugins
+
+load :: FilePath 
+     -> [FilePath] 
+     -> [PackageConf] 
+     -> Symbol 
+     -> IO (LoadStatus a)
+}
+
+\scm{
+load_ :: FilePath 
+      -> [FilePath] 
+      -> Symbol 
+      -> IO (LoadStatus a)
+}
+
+\scm{
+data LoadStatus a
+    = LoadSuccess Module a 
+    | LoadFailure Errors
+}
+\end{quote}
+%
+Example:
+%
+\begin{quote}
+\scm{
+do mv <- load "Plugin.o" ["api"] [] "resource"
+   case mv of
+	LoadFailure msg -> print msg
+	LoadSuccess _ v -> return v
+}
+\end{quote}
+%
+This is the basic interface to the dynamic loader. Load the object file
+specified by the first argument into the address space (the library will
+preload any module or package dependencies). The second argument is an
+include path to any additional objects to load (possibly the API of the
+plugin). The third argument is a list of paths to any user-defined
+\code{package.conf} files, specifying packages unknown to the GHC
+package system. \code{Symbol} is a string specifying the symbol name you
+wish to lookup. \code{load} returns a \code{LoadStatus} value representing
+failure, or an abstract representation of the module (for calls to
+\code{unload} or \code{reload}) with the symbol as a Haskell value. The
+value returned must be given an explicit type signature, or provided
+with appropriate type constraints such that GHC can determine the
+expected type returned by \code{load}.
+
+\code{load\_} is provided for the common situation where no user-defined
+package.conf files are required.
+
+\begin{quote}
+\scm{
+dynload :: Typeable a    
+        => FilePath  
+        -> [FilePath]
+        -> [PackageConf]
+        -> Symbol
+        -> IO (LoadStatus a)
+}
+\end{quote}
+%
+Example:
+%
+\begin{quote}
+\scm{
+do mv <- dynload "Plugin.o" ["api"] ["plugins.conf.inplace"] "resource"
+   case mv of
+	LoadFailure msg -> print msg
+	LoadSuccess _ v -> putStrLn v
+}
+\end{quote}
+%
+\code{dynload} is a safer form of \code{load}. It uses dynamic types
+to perform a check on the value returned by \code{load} at runtime, to
+ensure that it has the type the application expects it to have.
+
+In order to use \code{dynload}, the symbol the plugin exports must be
+of type \code{AltData.Dynamic:Dynamic}. (See the \code{AltData} library
+distributed with \hsplugins{}, and the \hsplugins{}
+\code{examples/dynload} directory. References to \code{Typeable} and
+\code{Dynamic} refer to the \hsplugins{} reimplementation of these
+libraries. \code{AltData.Dynamic} is used at the moment, as there is a
+limitation in the existing Data.Dynamic library in the presence of
+dynamic loading).
+
+The value wrapped up in the \code{Dynamic} must be an instance of
+\code{AltData.Typeable}. If the value exported by the plugin \emph{is}
+of type \code{Dynamic}, and the value wrapped by the \code{Dynamic}
+does not match the type expected of it by the application,
+\code{dynload} will return \code{Nothing}, indicating that the plugin
+is not typesafe with respect to the application. If the value passes
+the typecheck, \code{dynload} will return \code{LoadSuccess}. If the value
+exported by the plugin is \emph{not} of type \code{Dynamic},
+\code{dynload} will crash---this is a limitation of the existing
+\code{Dynamic} library, it can only type-check \code{Dynamic} values.
+Additionally, Data.Dynamic is limited to monomorphic types, or must be
+wrapped inside a rank-N type to hide the polymorphism from the
+typechecker. This is a bit cumbersome. An alternative typesafe
+\code{load} is available via the \code{pdynload} interface, which is
+able to enforce the type of the plugin using GHC's type inference
+mechanism, and is not restricted in its expressiveness (at the cost of
+greater load times):
+
+\begin{quote}
+\scm{
+pdynload :: FilePath
+         -> [FilePath]
+         -> [PackageConf]
+         -> Type
+         -> Symbol
+         -> IO (LoadStatus a)
+}
+
+\scm{
+pdynload_ :: FilePath
+          -> [FilePath]
+          -> [PackageConf]
+          -> [Arg]
+          -> Type
+          -> Symbol
+          -> IO (LoadStatus a)
+}
+\end{quote}
+%
+Example:
+%
+\begin{quote}
+\scm{
+do v <- pdynload "Plugin.o" ["api"] [] "API.Interface" "resource"
+   case v of
+	LoadSuccess _ a  -> putStrLn "yay!"
+	_                -> putStrLn "type error"
+}
+\end{quote}
+%
+\code{pdynload} is a replacement for \code{dynload}, which provides a
+solution to the various problems caused by the existing dynamics
+library in Haskell. Rather than use normal dynamics, which constrain
+us to monomorphic types only (or rank-N types), it instead uses GHC's
+type inference to unify the plugin's export value with that provided
+by the api (via its .hi file).  It is a form of \emph{staged type inference}
+for module interfaces, allowing plugins to use any type definable in Haskell.
+\code{pdynload} is like \code{dynload}, but requires a new \code{Type}
+argument. This can be considered a type annotation on the value the plugin
+should be constrained to.
+
+Prior to loading the object, \code{pdynload} generates a tiny Haskell
+source file containing, for example:
+%
+\begin{quote}
+\scm{
+module APITypeConstraint where
+import qualified API
+import qualified Plugin
+
+_ = Plugin.resource :: API.Interface
+}
+\end{quote}
+%
+It then calls GHC's type checker on this file, which runs the full
+Haskell type inference machinery. If the file typecheckes, then the
+plugin type is correct, and the plugin is safe to load, otherwise it
+is an error. 
+
+Because we use the full Haskell type checker, we can have a form of
+dynamic typechecking, on any type expressable in Haskell. A plugin's
+value may, for example, have class constraints -- something not
+checkable using the standard Dyanmic type. The cost is that
+\code{pdynload} is roughly 46\% slower than an unchecked load.
+ 
+The type of the plugin's resource field must be equivalent to the
+\code{Type}. There are some restrictions on the arguments that may be
+passed to pdynload. Currently, we require:
+        \begin{itemize}
+        \item The object name has the suffix (.o) removed and this
+        becomes a qualified module name in the generated type-checker
+        input file.
+
+        \item The type name must be a single fully-qualified
+        type-identifier, as the module name is stripped off (i.e.
+        everything up to the last ".") and used as a qualified import.
+        This means that you can't use, for example, \code{"Int ->
+        String"} as a type (type synonyms are fine, though).
+
+\end{itemize}
+
+For example, \code{pdynload "API2.o" ["./"] [] "API.PluginAPI"
+"doAction"} generates:
+
+\begin{quote}
+\scm{
+module <temp-generated-name> where
+import qualified API    -- comes from API.PluginAPI argument
+import qualified API2   -- comes from API2.o argument
+_ = API2.doAction :: API.PluginAPI
+}
+\end{quote}
+
+\begin{quote}
+\scm{
+unload :: Module -> IO ()
+}
+
+\scm{
+unloadAll :: Module -> IO ()
+}
+\end{quote}
+
+Unload an object, \emph{but not its dependencies} from the address
+space. \code{unloadAll} performs cascading unloading of a module
+\emph{and} its dependencies.
+
+\begin{quote}
+\scm{
+reload :: Module -> Symbol -> IO (LoadStatus a)
+}
+\end{quote}
+
+Unload, and then reload a module that must have been previously
+loaded.  Doesn't reload the dependencies. \code{reload} is useful in
+conjunction with \code{make}---a call to \code{reload} can be
+performed if \code{make} has recompiled the plugin source.
+
+Additionally, some support is provided to manipulation of 
+libraries of Haskell modules (usually known as packages):
+
+\begin{quote}
+\scm{
+loadPackage     :: String -> IO ()
+
+unloadPackage   :: String -> IO ()
+
+loadPackageWith :: String -> [PackageConf] -> IO ()
+}
+\end{quote}
+
+\code{loadPackage} explcitly pulls in a library (which must be visible
+in the current package namespace. \code{unloadPackage} unloads it.
+\code{loadPackageWith} behaves like \code{loadPackage}, but you are able
+to supply extra package.confs to augment the library search path.
+
+Examples:
+\begin{quote}
+\scm{
+do loadPackageWith "yi" ["yi.conf"]
+   unloadPackage "yi-0.1"
+}
+\end{quote}
+
+\newpage
+
+\section{Compilation Manager}
+
+The compilation manager is the system by which Haskell source code is
+compiled to object code suitable for loading.
+
+\subsection*{Interface}
+
+\begin{quote}
+\scm{
+import System.Plugins
+
+make :: FilePath 
+     -> [Arg] 
+     -> IO MakeStatus
+
+makeAll :: FilePath 
+        -> [Arg] 
+        -> IO MakeStatus
+
+recompileAll :: Module 
+             -> [Arg] 
+             -> IO MakeStatus
+
+data MakeStatus 
+        = MakeSuccess MakeCode FilePath 
+        | MakeFailure Errors
+
+data MakeCode = ReComp | NotReq
+}
+\end{quote}
+
+Compile a Haskell source file to an object file, with any arguments
+specified in the argument list passed through to GHC.  Returns the
+build status.
+
+\code{make} generates a GHC \code{.hi} file containing a list of
+package and objects that the source depends on. Subsequent calls to
+\code{load} will use this interface file to load module and library
+dependencies prior to loading the object itself. \code{makeAll} also
+recursively compiles any dependencies it can find using GHC's
+\code{--make} flag.
+
+\code{recompileAll} is like \code{makeAll}, but rather than relying on
+\code{ghc --make}, we explicitly check a module's dependencies.
+
+\begin{quote}
+\scm{
+merge   :: FilePath -> FilePath -> IO MergeStatus
+
+mergeTo :: FilePath -> FilePath -> FilePath -> IO MergeStatus
+
+mergeToDir :: FilePath -> FilePath -> FilePath -> IO MergeStatus
+
+data MergeStatus 
+        = MergeSuccess MergeCode Args FilePath 
+        | MergeFailure Errors
+
+type MergeCode = MakeCode
+}
+\end{quote}
+
+The merging operation is extremely useful for providing extra default
+syntax. An EDSL user then need not worry about declaring module names,
+or having required imports.  In this way, the stub file can also be
+used to provide syntax declarations that would be inconvenient to
+require of the plugin author. \code{merge} will include any import and
+export declarations written in the stub, as well as any module name,
+so that plugin author's need not worry about this compulsory syntax.
+Additionally, if a plugin requires some non-standard library, which
+must be provided as a \code{-package} flag to GHC, they may specify
+this using the non-standard \code{GLOBALOPTIONS} pragma.  Options
+specified in the source this way will be added to the command line.
+This is useful for users who wish to use GHC flags that cannot be
+specified using the conventional \code{OPTIONS} pragma. The merging
+operation uses the HSX parser library to parse Haskell source files.
+
+\code{mergeTo} behaves like \code{merge}, but we can specify the file in
+which to place output. \code{mergeToDir} lets you specify a directory in
+which to place merged files.
+
+\begin{quote}
+\scm{
+makeWith :: FilePath
+         -> FilePath
+         -> [Arg]
+         -> IO MakeStatus
+}
+\end{quote}
+
+This is a variety of \code{make} that first calls \code{merge} to
+combine the plugin source with a syntax stub. The result is then
+compiled. This is the preferred interface to EDSL authors who wish to
+add extra syntax to a user's source. It is important to note that the
+module and types from the second file argument are used to override
+any of those that appear in the first argument. For example, consider
+the following source files:
+
+\begin{quote}
+\scm{
+module A where
+
+a :: Integer
+a = 1
+}
+\end{quote}
+
+\begin{quote}
+\scm{
+module B where
+
+a :: Int
+}
+\end{quote}
+
+Calling \code{makeWith "A" "B" []} will merge the module name and types
+from module B into module A, generating a third file:
+
+\begin{quote}
+\scm{
+{-# LINE 1 "A.hs" #-}
+module MxYz123 where
+
+{-# LINE 3 "B.hs" #-}
+a :: Int
+{-# LINE 4 "A.hs" #-}
+a = 1
+}
+\end{quote}
+
+Leading to the desired result that we can ignore user-supplied module
+names and types. Knowing the module name, in particular, is important
+for dynamic loading, which requires the module name be known when
+searching for symbols.
+
+\begin{quote}
+\scm{
+hasChanged :: Module -> IO Bool
+}
+\end{quote}
+
+\code{hasChanged} returns \code{True} if the module or any of its
+dependencies have older object files than source files. Defaults to
+\code{True} if some files couldn't be located.
+
+\subsection*{Levels of Safety}
+
+The normal dynamic loader, using \code{load} on object files only,
+places full trust in the author of the plugin to provide a type-safe
+object file, containing valid code. This can be mitigated somewhat via
+the use of \code{make} to ensure that the plugin is at least Haskell
+code that is well-typed internally (if we trust GHC to compile it
+correctly). 
+
+If we trust the user to provide an interface of \code{Dynamic} type, we
+can check the plugin type at runtime, but the plugin's value must be
+\code{Typeable}, which restricts it to be a monomorphic type (or to
+using rank-N tricks). 
+
+The greatest safety can be obtained by using \code{pdynload}, at the
+cost of increased load times. \code{pdynload} essentially performs full
+type inference on the plugin interface at runtime. The type safety of
+the plugin, using \code{pdynload}, is then as safe as if the plugin was
+statically compiled into the application. It does not provide any
+\emph{further} safety than exists in static compilation. For example, it
+does not preclude the use of (evil) \code{unsafeCoerce\#} to defeat
+type-checking, either statically or at runtime. An extensive discussion
+of type safe plugin loading is available in the \hsplugins{} paper
+\urlh{http://www.cse.unsw.edu.au/~dons/hs-plugins/paper}{here}.
+
+\newpage
+
+\section{Eval.Haskell}
+
+\code{eval}, and its siblings, provide a mechanism to compile and run
+Haskell code at runtime, in the form of a String. The general framework
+is that the string is used to create a plugin source file, which is
+compiled and loaded, and type checked against its use. The resulting
+value is returned to the caller. It resembles a runtime metaprogramming
+\code{run} operator for closed code fragments.
+
+\subsection*{Interface}
+
+\begin{quote}
+\scm{
+import System.Eval.Haskell
+
+eval :: Typeable a => String -> [Import] -> IO (Maybe a)
+
+eval_ :: Typeable a =>
+         String      -- code to compile
+      -> [Import]    -- any imports
+      -> [String]    -- extra ghc flags
+      -> [FilePath]  -- extra package.conf files
+      -> [FilePath]  -- include search paths
+      -> IO (Either [String] (Maybe a))
+}
+\end{quote}
+
+\code{eval} takes a string, and a list of import module names, and
+returns a \code{Maybe} value. \code{Nothing} means the code did not
+compile, or did not typecheck at its splice point. \code{Just v} gives
+you \code{v}, the result of evaluating your code. It is interesting to
+note that \code{eval} has the type of an interpreter. The
+\code{Typeable} constraint is used to type check the evaluated code when
+it is loaded, using \code{dynload}.  As usual, \code{eval\_} is a
+version of \code{eval} that lets you pass extra flags to ghc and to the
+dynamic loader.
+
+The existing \code{Data.Dynamic} library requires that only monomorphic
+values are \code{Typeable}, so in order to evaluate polymorphic
+functions you need to wrap them up using rank-N types. Some examples:
+%
+\begin{quote}
+\scm{
+import System.Eval.Haskell
+
+main = do i <- eval "1 + 6 :: Int" [] :: IO (Maybe Int)
+          if isJust i then putStrLn (show (fromJust i)) else return ()
+}
+\end{quote}
+ 
+When executed this program calls \code{eval} to compile and load the
+simple arithmetic expression, returning the result, which is
+displayed. If the value loaded is not of type \code{Int},
+\code{dynload} will throw an exception.
+ 
+The following example, due to Manuel Chakravarty, shows how to
+evaluate a polymorphic function. Polymorphic values are not easily
+made dynamically typeable, but this example shows how to do it. The
+module \code{Poly} is imported as the second argument, providing the
+type of the polymorphic function:
+%
+\begin{quote}
+\scm{
+import Poly
+import System.Eval.Haskell
+
+main = do m_f <- eval "Fn (\\x y -> x == y)" ["Poly"]
+          when (isJust m_f) $ do
+                let (Fn f) = fromJust m_f
+                putStrLn $ show (f True True)
+                putStrLn $ show (f 1 2)
+}
+\end{quote}
+% 
+And the type of \code{Fn}:
+%
+\begin{quote}
+\scm{
+{-# OPTIONS -fglasgow-exts #-} 
+module Poly where
+
+import AltData.Typeable
+
+data Fn = Fn {fn :: forall t. Eq t => t -> t -> Bool}
+
+instance Typeable Fn where
+    typeOf _ = mkAppTy (mkTyCon "Poly.Fn") []
+}
+\end{quote}
+% 
+When executed, this program produces:
+%
+\begin{quote}
+\begin{verbatim}
+$ ./a.out
+True
+False
+\end{verbatim}
+\end{quote}
+
+We thus get dynamically typeable polymorphic functions.
+
+\begin{quote}
+\scm{
+unsafeEval :: String -> [Import] -> IO (Maybe a)
+
+unsafeEval_ :: String
+            -> [Import]
+            -> [String]
+            -> [FilePath]
+            -> IO (Either [String] a)
+}
+\end{quote}
+
+Wrapping up polymorphic values can be annoying, so we provide a
+\code{unsafeEval} function for people who like to live on the edge,
+which dispenses with dynamic typing, relying instead on the
+application to provide the correct type annotation on the call to
+\code{eval}. If the type loaded by \code{eval} is wrong,
+\code{unsafeEval} will crash. However, its lets us remove some
+restrictions on what types can be evaluated, which can be useful.
+
+{unsafeEval\_} lets the application have full control over the import
+environment and load flags to the eval call, which is useful for
+applications that wish to script themselves, and require specific
+modules and packages to be in scope in the eval-generated module.
+
+This example maps a \code{toUpper} over a list:
+%
+\begin{quote}
+\scm{
+import Eval.Haskell
+
+main = do s <- unsafeEval "map toUpper \"haskell\"" ["Data.Char"]
+          when (isJust s) $ putStrLn (fromJust s)
+}
+\end{quote}
+ 
+And here we evaluate a lambda abstraction, applying the result to
+construct a tuple. Note the type information that must be supplied in
+order for Haskell to type the usage of \code{fn}:
+%
+\begin{quote}
+\scm{
+import System.Eval.Haskell
+
+main = do fn <- unsafeEval "(\\(x::Int) -> (x,x))" [] :: IO (Maybe (Int -> (Int,Int)))
+          when (isJust fn) $ putStrLn $ show $ (fromJust fn) 7
+}
+\end{quote}
+\subsection{Utilities for use with eval}
+\code{hs-plugins} proves the following utilities for use with \code{eval}:
+\begin{itemize}
+\item
+\code{mkHsValues} is a helper function for converting \code{Data.Map}s
+of names and values into Haskell code. It relies on the assumption
+that the passed values' Show instances produce valid Haskell
+literals (this is true for all prelude types). It's type is as follows:
+\begin{quote}
+\scm{
+mkHsValues :: (Show a) => Data.Map String a -> String
+}
+\end{quote}
+\end{itemize}
+% \subsection{Foreign Eval}
+% 
+% A preliminary binding to \code{eval} has been implemented to allow C
+% (and Objective C) programs access to the evaluator. Foreign bindings
+% to the compilation manager and dynamic loader are yet to be
+% implemented, but shouldn't be too hard. An foreign binding to a
+% Haskell module that wraps up calls to \code{make} and \code{load}
+% would be fairly trivial.
+%  
+% At the moment we have an ad-hoc binding to \code{eval}, so that C
+% programmers who know the type of value that will be returned by
+% Haskell can call the appropriate hook into the evaluator. If they get
+% the type wrong, a nullPtr will be returned (so calling Haskell is
+% still typesafe). The foreign bindings to \code{eval} all return
+% \code{NULL} if an error occurred, otherwise a pointer to the value is
+% returned.
+% 
+% \begin{quote}
+% \scm{
+% foreign export ccall hs_eval_b :: CString -> IO (Ptr CInt)
+% 
+% foreign export ccall hs_eval_c :: CString -> IO (Ptr CChar)
+%   
+% foreign export ccall hs_eval_i :: CString -> IO (Ptr CInt)
+% 
+% foreign export ccall hs_eval_s :: CString -> IO CString
+% }
+% \end{quote}
+% 
+% An example C program for compiling and evaluating Haskell code at
+% runtime follows. This program calculates a fibonacci number, returning
+% it as a \code{CString} to the C program:
+% %
+% \begin{quote}
+% \begin{verbatim}
+% #include "EvalHaskell.h"
+% #include <stdio.h>
+% 
+% int main(int argc, char *argv[])
+% {
+%   char *p;
+%   hs_init(&argc, &argv);
+%   p = hs_eval_s("show $ let fibs = 1:1:zipWith (+) fibs (tail fibs) in fibs !! 20");
+%   if (p != NULL)
+%      printf("%s\n",p);
+%   else
+%      printf("error in code\n");
+%   hs_exit();
+%   return 0;
+% }
+% \end{verbatim}
+% \end{quote}
+% 
+
+\section{RTS Binding}
+
+The low level interface is the binding to GHC's Linker.c. Therefore,
+\hsplugins{} only works on platforms with a working GHCi. This library
+is based on code from André Pang's runtime loader. The low level
+interface is as follows:
+
+\begin{itemize}
+      \item \code{initLinker}  \em  start the linker up 
+      \item \code{loadObject}  \em  load a vanilla .o
+      \item \code{loadPackage} \em  load a GHC library and its cbits
+      \item \code{loadShared } \em  load a .so object file
+      \item \code{resolveObjs} \em  and resolve symbols
+\end{itemize}
+
+Additionally, \code{Hi.Parser} provides an interface to a GHC
+\code{.hi} file parser. Currently we only parse just the dependency
+information, import and export information from \code{.hi} files, but
+all the code is there for an application to extract other information
+from \code{.hi} files.
+
+\newpage
+
+\section{Dynamic Loader Implementation}
+
+The dynamic loader is the system by which modules, and their
+dependencies can be loaded, unloaded or reloaded at runtime, and
+through which we access the functions we need.
+
+At its lowest level, the \hsplugins{} loader is a binding to the GHC
+runtime loader and linker. This layer is a direct reimplementation of
+Andre Pang's \code{runtime\_loader} (barely any code changed). The
+code at this level can only load single modules, or packages/archives
+(which are just objects too). Any dependency resolution must be
+performed by hand.
+
+On top of Andre's interface is a more convenient interface through
+which user's should interact with the dynamic loader.  The most
+significant extension to Andre's work is the automatic calculation and
+loading of a plugin's package or module dependencies via .hi file
+information.  It also handles initialisation of the loader, and
+retrieval of values from the plugin in a more convenient way. Some
+state is also stored in the loader to keep track of which modules and
+packages have been loaded, to prevent unnecessary (actually, fatal)
+loading of object files and packages already loaded.  Thus you can
+safely load several plugins at once, that share common dependencies,
+without worrying about the dependencies being loaded multiple times.
+We also store package.conf information in the state, so we can work
+out where a package lives and what it depends on.
+
+The ability to remember which packages and objects have been loaded is
+based on ideas in Hampus Ram's dynamic loader, which has a more
+advanced dependency tracking system, with the ability to unload the
+dependencies of a plugin. \hsplugins{} doesn't provide ``cascading
+unloading''. The advantage \hsplugins{} has over Hampus' loader seems
+to be the automatic dependency resolution via vanilla .hi files and
+the dynamic recompilation stuff.
+
+Using \code{load}, any library packages, or any \code{.o} files, that a
+plugin depends upon will be automatically loaded prior to loading the
+module itself. \code{load} then looks up a symbol from the object file,
+and returns the value associated with the symbol as a conventional
+Haskell value. It should also be possible to load a GHCi-style \code{.o}
+archive of object files this way, although there is currently no way
+to extract multple plugin interfaces from a archive of objects.
+
+The application writer is not required to recalculate dependencies if
+the plugin changes, and the plugin author does not need to specify
+what dependencies exist, as is required in the lower level interface.
+This is achieved by using the dependency information calculated by GHC
+itself, stored in .hi files, to work out which modules and packages to
+load, and in what order. A plugin in \hsplugins{} is really a pair of
+an object file (or archive) and a \code{.hi} file, containing package
+and module dependency information.  
+
+The \code{.hi} file is created by GHC when the plugin is compiled,
+either by hand or via \code{make}.  \code{load} uses a binary parser to
+extract the relevant information from the \code{.hi} data. Because the
+dependency information is stored in a separate file to the application
+that loads the plugin, such information can be recalculated without
+having to modify the application. Becaues of this, it was easy to
+extend the load to support recompilation of module source, even if
+dependencies change, because dependencies are no longer hard-coded
+into the application source itself, but are specified by the plugin.
+
+Assuming we have a plugin exporting some data, ``resource'', with a
+record name \code{field :: String}, here is an example call to \code{load}:
+%
+\begin{quote}
+\scm{
+do m_v   <- load "Test.o" ["."] [] "resource"
+   v <- case m_v of
+          LoadSuccess _ v -> return v
+          _               -> error "load failed"
+   putStrLn $ field v
+}
+\end{quote}
+
+This loads the object file \code{Test.o}, and any packages or objects
+\code{Test.o} depends on. It resolves undefined symbols, and returns
+from the object file the Haskell value named ``resource'', as the
+value ``v''. This must be a value exported by the plugin. We then
+retrieve the \code{field} component of \code{v}, and print it out.
+
+This simple usage assumes that the plugin to load is in the same
+directory as the application, and that the api defining the interface
+between plugin and application is also in the current directory (hence
+the ``.'' in the 2nd argument to \code{load}).
+
+\subsection*{Dynamically Loading the Dynamic Loader}
+
+It is also possible to load the \code{plugins} or \code{eval}
+libraries in GHC. Here, for example, we load the \code{plugs}
+interactive environment in GHCi, and evaluated some code. The source to
+\code{plugs} is in Appendix
+\ref{sec:plugs}.
+%
+\begin{quote}
+\begin{verbatim}
+paprika$ ghci -package-conf ../../../plugins.conf.inplace -package eval
+   ___         ___ _
+  / _ \ /\  /\/ __(_)
+ / /_\// /_/ / /  | |      GHC Interactive, version 6.3, for Haskell 98.
+/ /_\\/ __  / /___| |      http://www.haskell.org/ghc/
+\____/\/ /_/\____/|_|      Type :? for help.
+
+Loading package base ... linking ... done.
+Loading package altdata ... linking ... done.
+Loading package unix ... linking ... done.
+Loading package mtl ... linking ... done.
+Loading package lang ... linking ... done.
+Loading package posix ... linking ... done.
+Loading package haskell98 ... linking ... done.
+Loading package haskell-src ... linking ... done.
+Loading package plugins ... linking ... done.
+Loading package eval ... linking ... done.
+Prelude> :l Main
+Skipping  Main             ( Main.hs, Main.o )
+Ok, modules loaded: Main.
+Prelude Main> main
+Loading package readline ... linking ... done.
+           __                          
+    ____  / /_  ______ ______          
+   / __ \/ / / / / __ `/ ___/     PLugin User's GHCi System, for Haskell 98
+  / /_/ / / /_/ / /_/ (__  )      http://www.cse.unsw.edu.au/~dons/hs-plugins
+ / .___/_/\__,_/\__, /____/       Type :? for help     
+/_/            /____/                  
+
+Loading package base ... linking ... done
+plugs> map (\x -> x + 1) [0..10]
+[1,2,3,4,5,6,7,8,9,10,11]
+plugs> :t "haskell"
+"haskell" :: [Char]
+plugs> :q
+*** Exception: exit: ExitSuccess
+Prelude Main> :q
+Leaving GHCi.
+\end{verbatim}
+\end{quote}
+
+\subsection*{Dynamic Typing}
+
+Support is also provided to unwrap and check the type of dynamically
+typed plugin values (those wrapper in a \code{toDyn}) via
+\code{dynload}. This is the same as \code{load}, except that instead
+of a returning the value it finds, it unwraps a dynamically typed
+value, checks the type, and returns the unwrapped value. This is to
+provide further trust that the symbol you are retrieving from the
+plugin is of the type you think it is, beyond that trust you have by
+knowing that the plugin was compiled against a shared API. By using
+\code{dynload} it is not enough for an object file to just have the
+same symbol name as the function you require, it must also carry the
+\code{Data.Dynamic} representation of the type, too. \code{pdynload}
+rectifies most of \code{dynload}'s limitations, but at the cost of
+additional running time.
+
+\section{Compilation Manager Implementation}
+
+Along side the dynamic loader is the compilation manager.  This is a
+\code{make}-like system for compiling Haskell source, prior to loading
+it. \code{make} checks if a source file is newer than its associated
+object file. If so, the source is recompiled to an object file, and a
+new dependency file is created, in case the dependencies have changed
+in the source. This module can then be loaded.  The idea is to allow
+EDSL authors to write plugins without having to touch a compiler: it
+is all transparent. It also allows us to enforce type safety in the
+plugin by injecting type constraints into the plugin source, as has
+been discussed eariler.
+
+The effect is much like \emph{hi} (Hmake Interactive), funnily enough.
+An application using both \code{make} and \code{load} behaves like a
+Haskell interpreter, using \code{eval}.  You modify your plugin, and
+the application notices the change, recompiles it (possibly issuing
+type errors) and then reloads the object file, providing the
+application with the latest version of the code.
+ 
+An example:
+%
+\begin{quote}
+\scm{
+do status <- make "Plugin.hs" []
+   obj    <- case status of
+                MakeSuccess _ o -> return o
+                MakeFailure e   -> mapM_ putStrLn e >> error "failed"
+
+   m_v    <- load obj ["api"] [] "resource"
+   v      <- case m_v of
+            	LoadSuccess _ v -> return v
+            	_               -> error "load failed"
+   putStrLn $ field v
+}
+\end{quote}
+
+\code{make} accepts a source file as an argument, and a (usually empty)
+list of GHC flags needed to compile the object file. It then checks to
+see if compilation is required, and if so, it calls GHC to compile the
+code, with and arguments supplied. If any errors were generated by
+GHC, they are returned as the third component of the triple.
+
+Usually it will be necessary to ensure that GHC can find the plugin
+API to compile against. This can be done by either making sure the API
+is in the same directory as the plugin, or by adding a \code{-i} flag to
+\code{make}'s arguments. If the API is created as a ``package'' with a
+package.conf file, \code{make} can be given \code{-package-conf} arguments
+to the same effect.
+
+Normally, \code{make} generates the \code{.o} and \code{.hi} files in
+the same directory as the source file. This is not always desirable,
+particularly for interpreter-like applications. To solve this, you can
+pass \code{[''-odir'', path]} as elements of the arg list to
+\code{make}, and it will respect these arguments, generating the
+object and interface file in the directory specified. GHC's argument
+\code{''-o''} is also respected in a similar manner, so you could also
+say \code{[''-o'', obj]} for the same effect.
+
+\code{make} is entirely optional. All user's have to do to use the
+loader on its own is make sure they only load object files that also
+have a \code{.hi} file. This will usually be the case if the plugin is
+compiled with GHC.
+
+\subsection*{makeWith}
+
+\code{makeWith} merges two source files together, using the function
+and value declarations from one file, with any syntax in the second,
+creating a new third source file. It then compiles this source file
+via \code{make}.
+
+This function exists as a benefit to EDSL authors and is related to
+the original motivation for \hsplugins{}, as a .conf file language
+library. Configuration files need to be clean and simple, and you
+can't rely, or trust, the user to get all the compulsory details
+correct. So the solution is to factor out any compulsory syntax, such
+as module names, imports, and also to provide a default instance of
+the API, and store this code in a separate file provided by the
+application writer, not the user.  \code{makeWith} then merges
+whatever the user has written, with the syntax stub, generating a
+complete Haskell plugin source, with the correct module names and
+import declarations. We also ensure the plugin only exports a single
+interface value while we are here.
+
+\code{makeWith} thus requires a Haskell parser to parse two source files
+and merge the results. We are merging abstract syntax here. This is
+implemented using the Language.Haskell parser library. Unfortunately,
+this library doesn't implement all of GHC's extensions, so if you wish
+to use \code{makeWith} you can only write Haskell source that can be
+parsed by this library, which is just H98 and a few extensions. This
+is another short coming in the current design that will be overcome
+with \code{-package ghc}. Remember, however, for normal uses of
+\code{make} and \code{load} you are unrestricted in what Haskell you use.
+This is the same restriction present in happy, the Haskell parser,
+placed on the code you can provide in the \code{.y} source.
+
+\code{makeWith} also makes use of line pragmas. If the merged file
+fails to compile, the judicious use of line number pragmas ensure that
+the user receives errors messages reported with reference to their
+source file, and not line number in the merged file. This is a
+property of the Language.Haskell parser that we can make use of.
+
+An example of \code{makeWith}:
+%
+\begin{quote}
+\scm{
+do status <- makeWith "Plugin.in" "Plugin.stub" []
+   obj <- case status of
+                MakeFailure e   -> mapM_ putStrLn e >> error "failed"
+                MakeSuccess _ o -> return o
+   m_v  <- load obj [apipath] [] "resource"
+   v <- case m_v of
+                LoadSuccess _ v -> return v
+                _               -> error "load failed"
+   putStrLn $ field v
+}
+\end{quote}
+
+We combine the user's file (\code{Plugin.in}) with a stub of syntax
+generating a new, third Haskell file in the default tmpdir. This is
+compiled as per usual, producing object and interface files. The
+object is then loaded, and we extract the value exported.
+
+Using \code{makeWith} it is possible to write very simple, clear
+Haskell plugins, that appear not to be Haskell at all. It is an easy
+way to get EDSL user's writing plugins that are actually Haskell
+programs, for .e.g, configuration files. See the examples that come
+with the src.
+
+\newpage
+
+\section{An Example}
+
+This is an introductory example.
+
+\subsection*{API}
+
+First we need an interface between the application and the plugin.
+This module needs to be visible to both the app and the plugin, in the
+interest of clear and well-defined interfaces: 
+%
+\begin{quote}
+\scm{
+module StringProcAPI (Interface(..), plugin) where
+
+data Interface = Interface {
+       stringProcessor :: String -> String
+}
+
+plugin :: Interface
+plugin = Interface { stringProcessor = id }
+}
+\end{quote}
+
+Here we define \code{Interface} as the inteface signature for the
+object passed between plugin and application. We'll use the record
+syntax as it looks intuitive in the plugin. We provide a default
+instance, the \code{plugin} value, that can be overwritten in the
+actual plugin, ensuring sensible behaviour in the absence of any
+plugins. The API should theoretically be compiled with \code{-Onot} to
+avoid interface details leaking out into the \code{.hi} file.
+
+\subsection*{The Plugin}
+
+This is our plugin. Note that the plugin will be compiled entirely
+seperately from the application. It must only rely on the API, and
+nothing in the application source.
+%
+\begin{quote}
+\scm{
+module StringProcPlugin (resource) where
+
+import StringProcAPI (plugin)
+
+resource = plugin {
+     stringProcessor = reverse 
+}
+}
+\end{quote}
+
+Using the record syntax we overwrite the \code{function} field with our
+own value, \code{reverse}. The value \code{resource} is the magic symbol
+that must be defined, and which the application will use to find the
+data the plugin exports.
+
+Now, we can make this even easier on the plugin writer by the use of a
+``stub'' file. \code{makeWith} lets you merge a plugin source with
+another Haskell file, and compiles the result into the actual plugin
+object. So the application can provide a stub file containing module
+declarations and imports, and a default plugin value. Here is an
+application-provided stub, factoring out compulsory syntax and type
+declarations from the plugin:
+%
+\begin{quote}
+\scm{
+module StringProcPlugin ( resource ) where
+
+import StringProcAPI
+
+resource :: Interface
+resource = plugin
+}
+\end{quote}
+
+By factoring out compulsory syntax, the plugin author only has to
+provide an overriding instance of the \code{resource} field. So all
+the plugin actually consists of, is:
+%
+\begin{quote}
+\scm{
+resource = plugin {
+      stringProcessor = reverse
+}
+}
+\end{quote}
+
+That is all the code we need! This file may be called anything at all.
+
+More complex APIs may have more fields, of course. The nice thing
+about this arrangement is that the user will write some simple syntax,
+which will nonetheless by typechecked safely against the API. Errors
+are also reported using line numbers from the source file, not the
+stub, which makes things less confusing.
+
+\subsection*{The Application}
+
+Now we need to write an application that can use values of the kind
+defined in the API, and which can compile and load plugins. The basic
+mechanism to compile and load a plugin is as follows:
+%
+\begin{quote}
+\scm{
+do status <- make "StringProcPlugin.hs" []
+   obj    <- case status of
+                MakeSuccess _ o -> return o
+                MakeFailure e   -> mapM_ putStrLn e >> error "failed"
+
+   m_v    <- load obj ["."] [] "resource"
+   val    <- case m_v of
+                LoadSuccess _ v -> return v
+                _               -> error "load failed"
+}
+\end{quote}
+%
+This code calls \code{make} to compile the plugin source, yielding
+wrapper around a handle to an object file. The object can then be loaded
+using \code{load}, and the code associated with the symbol
+\code{resource} is retrieved. 
+
+We embed this code in a simple shell-like loop, applying the function
+exported by the plugin:
+%
+\begin{quote}
+\scm{
+import System.Plugins
+import StringProcessorAPI
+import System.Console.Readline
+import System.Exit
+
+source = "Plugin.hs"
+stub   = "Plugin.stub"
+symbol = "resource"
+
+main = do s <- makeWith source stub []
+          o <- case s of
+                MakeSuccess _ obj -> do
+                        ls <- load obj ["."] [] symbol
+                        case ls of LoadSuccess m v -> return (m,v)
+                                   LoadFailure err -> error "load failed"
+                MakeFailure e -> mapM_ putStrLn e >> error "compile failed"
+          shell o
+
+shell o@(m,plugin) = do 
+        s <- readline "> "
+        cmd <- case s of 
+                Nothing          -> exitWith ExitSuccess
+                Just (':':'q':_) -> exitWith ExitSuccess
+                Just s           -> addHistory s >> return s
+
+        s  <- makeWith source stub []   -- maybe recompile the source
+        o' <- case s of
+                MakeSuccess ReComp o -> do 
+                        ls <- reload m symbol
+                        case ls of LoadSuccess m' v' -> return (m',v')
+                                   LoadFailure err   -> error "reload failed"
+                MakeSuccess NotReq _ -> return o
+                MakeFailure e -> mapM_ putStrLn e >> shell o
+        eval cmd o'
+        shell o'
+
+eval ":?" _ = putStrLn ":?\n:q\n<string>"
+
+eval s (_,plugin) = let fn = (stringProcessor plugin) in putStrLn (fn s)
+}
+\end{quote}
+
+We have to import the hs-plugins library, and the API. The main loop
+proceeds by compiling and loading the plugin for the first time, and
+then calls \code{shell}, the interpeter loop. This loop lets us apply
+the function in the plugin to strings we supply.  We have to pass
+around the \code{(Module, a)} pair we get back from \code{reload}, so
+that we can pass it to \code{eval} to do the real work.  The first
+\code{eval} case is where we use the record syntax to select the
+\code{function} field out of \code{v}, the plugin interface object,
+and we apply it to s. Try it out:
+%
+\begin{quote}
+\begin{verbatim}
+paprika$ ./a.out 
+Loading package base ... linking ... done
+Loading objects API Plugin ... done
+> :?
+":?"
+":q"
+"<string>"
+> abcdefg
+gfedcba
+\end{verbatim}
+\end{quote}
+
+Now, if we edit the plugin while the shell is running, the next time
+we type something at the prompt the plugin will be unloaded,
+recompiled and reloaded. Because the plugin is really an EDSL, we can
+use any Haskell we want, so we'll change the plugin to:
+%
+\begin{quote}
+\scm{
+import Data.Char
+
+resource = plugin {
+	stringProcessor = my_fn
+}
+
+my_fn s = map toUpper (reverse s)
+}
+\end{quote}
+
+Back to the shell:
+%
+\begin{quote}
+\begin{verbatim}
+> abcdefg 
+Compiling plugin ... done
+Reloading Plugin ... done
+GFEDCBA
+\end{verbatim}
+\end{quote}
+
+And that's it: dynamically recompiled and reload Haskell code!
+
+\section{Multiple Plugins}
+
+It is quite easy to load multiple plugins, that all implement the
+common plugin API, and that all export the same value (though
+implemented differently). This make \hsplugins{} suitable for
+applications that wish to allow an arbitrary number of plugins. The
+main problem with multiple plugins is that they may share
+dependencies, and if \code{load} na\"ively loaded all dependencies
+found in the set of \code{.hi} files associated with all the plugins,
+the GHC rts would crash. To solve this the \hsplugins{} dynamic loader
+maintains state storing a list of what modules and packages have been
+loaded already. If \code{load} is called on a module that is already
+loaded, or dependencies are attempted to load, that have already been
+loaded, the dynamic loader ignores these extra dependencies. This
+makes it quite easy to write an application that will allows an
+arbitrary number of plugins to be loaded. An example follows.
+
+\subsection*{Definition}
+
+First we need to define the API that a plugin must type check against,
+in order to be valid.  
+%
+\begin{quote}
+\scm{
+module API where
+
+data Interface = Interface { 
+	valueOf :: String -> String 
+}
+
+plugin :: Interface 
+plugin = Interface { valueOf = id }
+}
+\end{quote}
+
+We can then implement a number of plugins that provide values of type
+"Interface". We show three plugins that export string manipulation functions:
+%
+\begin{quote}
+\scm{
+module Plugin1 where
+
+import API
+import Data.Char
+
+resource = plugin {
+	valueOf = \s -> map toUpper s
+}
+}
+\end{quote}
+
+\begin{quote}
+\scm{
+module Plugin2 where
+
+import API
+import Data.Char
+
+resource = plugin {
+	valueOf = \s -> map toLower s
+}
+}
+\end{quote}
+
+\begin{quote}
+\scm{
+module Plugin3 where
+
+import API
+
+resource = plugin {
+	valueOf = reverse
+}
+}
+\end{quote}
+
+And finally we need to write an application that would use these
+plugins. Remember that the application is written without knowledge of
+the plugins, and the plugins are written without knowledge of the
+application. They are each implemented only in terms of the API, a
+shared module and \code{.hi} file. An application needs to make the
+API interface available to plugin authors, by distributing the API
+object file and \code{.hi} file with the application.
+%
+\begin{quote}
+\scm{
+import System.Plugins
+import API
+
+main = do
+ let plist = ["Plugin1.o", "Plugin2.o", "Plugin3.o"]
+ plugins <- mapM (\p -> load p ["."] [] "resource") plist
+ let functions = map (valueOf . fromLoadSuc) plugins
+ mapM_ (\f -> putStrLn $ f "haskell is for hackers") functions
+
+fromLoadSuc (LoadFailure _)   = error "load failed"
+fromLoadSuc (LoadSuccess _ v) = v
+
+}
+\end{quote}
+
+This application simply loads all the plugins and retrieves the
+functions they export. It then applies each of these functions to a
+string, printing the result. We assume for this example that the
+plugins are compiled once only, and are not compiled dynamically via
+\code{make}. This implies that you have to use \code{GHC} to generate
+the \code{.hi} file for each plugin. A sample Makefile to compile the
+plugins, and the api:
+%
+\begin{quote}
+\begin{verbatim}
+all:
+    ghc -Onot -c API.hs
+    ghc -O -c Plugin1.hs
+    ghc -O -c Plugin2.hs
+    ghc -O -c Plugin3.hs
+\end{verbatim}
+\end{quote}
+
+Ghc creates \code{.hi} files for each plugin, which can be inspected
+using the \code{Plugins.BinIface.readBinIface} function. It parses the
+\code{.hi} file, generating, roughly, the following:
+%
+\begin{quote}
+\begin{verbatim}
+interface "Main" Main
+module dependencies: A, B
+package dependencies: base, haskell98, lang, unix
+\end{verbatim}
+\end{quote}
+
+which says that the plugin depends upon a variety of system packages,
+and the modules A and B. All these dependencies must be loaded before
+the plugin itself.
+
+You then need to compile the application against the API, and against
+the \hsplugins{} library:
+%
+\begin{quote}
+\begin{verbatim}
+ghc -O --make -package plugins Main.hs
+\end{verbatim}
+\end{quote}
+
+Running the application produces the following result. Note that the
+verbose output can be switched off by compiling \hsplugins{} without
+the \code{-DDEBUG} flag. If you look at the \code{.hi} file, using
+\code{ghc --show-iface}, you'll see that they all depend on the base
+package, and on the API, but the state stored in the dynamic loader
+ensures that these shared modules are only loaded once:
+%
+\begin{quote}
+\begin{verbatim}
+Loading package base ... linking ... done
+Loading object API Plugin1 ... done
+Loading object Plugin2 ... done
+Loading object Plugin3 ... done
+
+HASKELL IS FOR HACKERS
+haskell is for hackers
+srekcah rof si lleksah
+\end{verbatim}
+\end{quote}
+
+Archives of plugins can be loaded in one go if they have been linked
+into a .o GHCi package, see \code{loadPackage}.
+
+\newpage
+
+\appendix
+
+\section{License} 
+
+This library is distributed under the terms of the LGPL:
+
+\begin{quote}
+
+Copyright 2003-5, Don Stewart - \url{http://www.cse.unsw.edu.au/~dons}
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
+USA
+
+\end{quote}
+
+\section{Portability}
+
+The library tries to be portable. There are two major points that
+limit easy portabilty. The main issue is a dependence on the GHC dynamic
+linker. \hsplugins{} is thus limited to platforms to which GHC's dyn
+linker has been ported (this is essentially the same as the platforms
+that can run GHCi).
+
+\newpage
+
+\section{A Haskell Interpreter using Plugins}
+% \label{sec:plugs}
+
+Here is a full length example of a Haskell interpreter/compiler in the
+style of Malcolm Wallace's \code{hi}. Rather than compiling the
+user's code to an executable, we use \hsplugins{} to instead load an
+object file and execute that instead, using the \code{eval} interface.
+This cuts out the linking phase from the process, making turnaround at
+the prompt around twice as fast as \code{hi}.
+
+\subsection*{Source of Plugs}
+
+\begin{quote}
+\scm{
+import System.Eval.Haskell
+import System.Plugins
+
+import System.Exit              ( ExitCode(..), exitWith )
+import System.IO
+import System.Console.Readline  ( readline, addHistory )
+
+symbol = "resource"
+
+main = do
+        putStrLn banner 
+        putStr "Loading package base" >> hFlush stdout
+        loadPackage "base" 
+        putStr " ... linking ... " >> hFlush stdout
+        resolveObjs
+        putStrLn "done"
+
+        shell []
+
+shell :: [String] -> IO ()
+shell imps = do 
+        s <- readline "plugs> "
+        cmd <- case s of 
+                Nothing          -> exitWith ExitSuccess
+                Just (':':'q':_) -> exitWith ExitSuccess
+                Just s           -> addHistory s >> return s
+        imps' <- run cmd imps
+        shell imps'
+
+run :: String -> [String] -> IO [String]
+run ""   is = return is
+run ":?" is = putStrLn help >> return is
+
+run ":l" _             = return []
+run (':':'l':' ':m) is = return (m:is)
+
+run (':':'t':' ':s) is = do 
+        ty <- typeOf s is
+        when (not $ null ty) (putStrLn $ s ++ " :: " ++ ty)
+        return is
+
+run (':':_) is = putStrLn help >> return is
+
+run s is = do 
+        s <- unsafeEval ("show $ "++s) is
+        when (isJust s) (putStrLn (fromJust s))
+        return is
+
+banner = "\ 
+\           __                          \n\
+\    ____  / /_  ______ ______          \n\
+\   / __ \\/ / / / / __ `/ ___/     PLugin User's GHCi System, for Haskell 98\n\
+\  / /_/ / / /_/ / /_/ (__  )      http://www.cse.unsw.edu.au/~dons/hs-plugins\n\
+\ / .___/_/\\__,_/\\__, /____/       Type :? for help     \n\
+\/_/            /____/                  \n"
+
+help = "\
+\Commands :\n\ 
+\  <expr>               evaluate expression\n\ 
+\  :t <expr>            show type of expression (monomorphic only)\n\ 
+\  :l module            bring module in to scope\n\ 
+\  :l                   clear module list\n\ 
+\  :quit                quit\n\ 
+\  :?                   display this list of commands"
+}
+\end{quote}
+
+\subsection*{A Transcript}
+
+And a transcript:
+%
+\begin{quote}
+\begin{verbatim}
+$ ./plugs
+           __                          
+    ____  / /_  ______ ______          
+   / __ \/ / / / / __ `/ ___/     PLugin User's GHCi System, for Haskell 98
+  / /_/ / / /_/ / /_/ (__  )      http://www.cse.unsw.edu.au/~dons/hs-plugins
+ / .___/_/\__,_/\__, /____/       Type :? for help     
+/_/            /____/                  
+
+Loading package base ... linking ... done
+plugs> 1
+1
+plugs> let x = 1 + 2 in x
+3
+plugs> :l Data.List
+plugs> case [1,3,2] of x -> sort x
+[1,2,3]
+plugs> reverse [1,3,2]
+[2,3,1]
+plugs> map (\x -> (x,2^x)) [1,2,3,4,5,6,7,8,9,10]
+[(1,2),(2,4),(3,8),(4,16),(5,32),(6,64),(7,128),(8,256),(9,512),(10,1024)]
+plugs> :t "haskell"
+"haskell" :: [Char]
+plugs> :quit
+\end{verbatim}
+\end{quote}
+
+\end{document}

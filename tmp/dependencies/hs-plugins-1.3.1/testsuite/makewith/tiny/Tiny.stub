@@ -1,0 +1,31 @@
+module Tiny ( resource, resource_dyn )  where
+
+import API
+import Data.Dynamic
+
+resource = tiny
+
+resource_dyn :: Dynamic
+resource_dyn = toDyn resource
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

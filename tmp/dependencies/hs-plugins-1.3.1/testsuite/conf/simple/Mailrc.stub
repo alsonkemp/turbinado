@@ -1,0 +1,28 @@
+module Mailrc ( resource )  where
+
+import API
+
+resource :: Interface
+resource = mail
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

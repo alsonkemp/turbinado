@@ -1,0 +1,3 @@
+module Plugin where
+
+resource = 0xBAD :: Int

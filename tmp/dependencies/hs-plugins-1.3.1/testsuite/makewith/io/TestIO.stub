@@ -1,0 +1,10 @@
+
+module TestIO ( resource, resource_dyn )  where
+
+import API
+import Data.Dynamic
+
+resource = testio
+
+resource_dyn :: Dynamic
+resource_dyn = toDyn resource

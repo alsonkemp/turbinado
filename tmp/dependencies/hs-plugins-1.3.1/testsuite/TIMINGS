@@ -1,0 +1,45 @@
+Method:
+	* "pdynload" 
+		comes from pdynload/small
+	* "load + ghc" 
+		comes from pdynload/null, with lines 13-14
+		uncommented from prog/Main.hs
+	* "dynload" 
+		from dynload/simple
+	* "load, no check"
+		from pdynload/null, with lines 13-14 of prog/Main.hs
+		commented out
+
+For example, to run the "pdynload" test:
+	$ cd pdynload/small
+	$ make
+	$ make check	  # to prime caches, etc.
+	$ time make check
+	$ time make check
+	$ time make check # run 'time make check' until value converges
+
+The converged value is entered into the "Raw" timings, and then the
+scaled timing is calculated for each machine. These scaled values were
+then averaged over the number of machines, yielding the final
+"Average" scores -- the average over a number of machines and os.
+
+Raw timing:
+pdynload 	load+ghc	dynload		load, no check
+
+0.33		0.25		0.22		0.21	-- P4 2.6 ,  OpenBSD
+0.38		0.31		0.29		0.27	-- P4 2.66,  Linux
+0.84		0.77		0.64		0.55	-- Quad P4 2.4, Linux
+0.76		0.60		0.52		0.50	-- AMD 1.1G, Linux
+0.95            0.83            0.75            0.72    -- G5 2.0G,  Mac OS X
+							-- Quad Itanium 1,Linux
+
+Scaled:
+1.57		1.19		1.05		1
+1.40		1.15		1.07
+1.52		1.4		1.16
+1.52		1.2		1.04
+1.32            1.15            1.04
+
+Average:
+=1.46         =	1.218	      = 1.07
+					

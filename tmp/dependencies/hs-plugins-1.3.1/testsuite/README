@@ -1,0 +1,17 @@
+These examples illustrate the various uses of hs-plugins.
+
+conf		a configuration file edsl using plugins
+dynload		dynamically typed load
+eval		runtime evaluation of haskell strings, from Haskell and C
+hmake		the 'plugs' haskell interpreter
+iface		test the interface file parser
+load		load a plugin
+make		build a Haskell file
+makewith	merge and build a Haskell file
+multi		load multiple plugins at once
+objc		load Haskell plugins into object C programs
+pkgconf		test package.conf parsing
+popen		test popen
+reload		reload a plugin when it changes
+shell		a simple string filter
+unload		test unloading of plugins

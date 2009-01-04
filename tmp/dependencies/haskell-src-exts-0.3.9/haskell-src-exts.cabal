@@ -1,0 +1,54 @@
+Name:                   haskell-src-exts
+Version:                0.3.9
+License:                BSD3
+License-File:           LICENSE
+Author:                 Niklas Broberg
+Maintainer:             Niklas Broberg <nibro@cs.chalmers.se>
+Category:               Language
+Synopsis:               Manipulating Haskell source: abstract syntax, lexer, parser, and pretty-printer
+Description:            Haskell-Source with Extensions (HSE, haskell-src-exts)
+                        is an extension of the standard haskell-src package,
+                        and handles most common syntactic extensions to Haskell, including:
+                        .
+                        * Multi-parameter type classes with functional dependencies
+                        .
+                        * Indexed type families (including associated types)
+                        .
+                        * Empty data declarations
+                        .
+                        * GADTs
+                        .
+                        * Implicit parameters (ghc and hugs style)
+                        .
+                        * Template Haskell (now works with GHC 6.4+ syntax)
+                        .
+                        and a few more. Apart from these standard extensions,
+                        it also handles regular patterns as per the HaRP extension
+                        as well as HSX-style embedded XML syntax.
+                        .
+                        For details on usage, please see the website.
+Homepage:               http://code.haskell.org/HSP/haskell-src-exts
+Stability:              Experimental
+Tested-with:            GHC==6.8.2
+Build-Type:             Simple
+Cabal-Version:          >= 1.2
+
+Flag splitBase
+  Description:          Choose the new smaller, split-up base package.
+
+Library
+  Build-Tools:          happy >= 1.17
+  Build-Depends:        base
+  if flag(splitBase)
+    Build-Depends:      base >= 3, array >= 0.1, pretty >= 1.0
+  else
+    Build-Depends:      base < 3
+
+  Exposed-modules:      Language.Haskell.Exts,
+                        Language.Haskell.Exts.Parser,
+                        Language.Haskell.Exts.Pretty,
+                        Language.Haskell.Exts.Syntax,
+                        Language.Haskell.Exts.Build
+  Other-modules:        Language.Haskell.Exts.ParseMonad,
+                        Language.Haskell.Exts.Lexer,
+                        Language.Haskell.Exts.ParseUtils

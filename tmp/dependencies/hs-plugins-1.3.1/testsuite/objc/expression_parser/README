@@ -1,0 +1,6 @@
+This little application is an example of using hs-plugins to embed a Haskell
+'interpreter' inside an Objective-C, Cocoa-based program.  You will need Mac OS
+X for this to be of any use!
+
+To build it, type 'make', which will build a .app bundle in the build/ directory.  Or, 'open *.xcode', and hit the build button in there.
+

@@ -1,0 +1,4 @@
+interface "main" Main
+module dependencies: A, B
+package dependencies: base, plugins-1.0
+
