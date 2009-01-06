@@ -150,10 +150,10 @@ generateParentModelImports t ts =
 
 generateModelFile typeName =
   unlines $
-  ["module App.Models." ++ typeName ++ "Model"
-  ,"  ( module App.Models." ++ typeName ++ "Model"
+  ["module App.Models." ++ typeName
+  ,"  ( module App.Models." ++ typeName
   ,"  , module App.Models.Bases." ++ typeName ++ "Type"
-  ,"  , module App.Models.Bases." ++ typeName ++ "Finders"
+  ,"  , module App.Models.Bases." ++ typeName ++ "Functions"
   ,"  , module App.Models.Bases." ++ typeName ++ "Relations"
   ,"  , module App.Models.Bases.Common"
   ,"  ) where"
