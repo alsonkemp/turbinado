@@ -217,8 +217,7 @@ generateIsModel t cs typeName =
     ["instance IsModel " ++ typeName ++ " where"
     ,"    insert m returnId = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res  <- liftIO $ HDBC.handleSqlError $ HDBC.run conn \" INSERT INTO " ++ t ++ " (" ++ (concat $ intersperse "," $ M.keys cs) ++") VALUES (" ++ (intercalate "," (take (M.size cs) (repeat "?"))) ++ ")\""
-    ,"                  [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m") (M.keys cs) ) ++ "]"
+    ,"        res  <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\" INSERT INTO " ++ t ++ " (" ++ (intercalate "," $ M.keys cs) ++") VALUES (" ++ (intercalate "," $ map generateQs (M.assocs cs) ) ++ ")\")  ( " ++ (intercalate " ++ " $ filter (not . null) $ map generateArgs (M.assocs cs) ) ++ ")"
     ,"        liftIO $ HDBC.handleSqlError $ HDBC.commit conn"
     ,"        if returnId"
     ,"          then do i <- liftIO $ HDBC.catchSql (HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Int)]]) ) "
@@ -253,6 +252,14 @@ generateIsModel t cs typeName =
     ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY ? LIMIT 1\")  (sp ++ [HDBC.toSql op])"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
      ]
+       where generateQs   :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
+             generateQs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("\" ++ (case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"") else "?"
+             generateQs (c, (_, _, True)) = "\" ++ (case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"" 
+             generateQs (c, _) = "?" 
+             generateArgs :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
+             generateArgs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("(case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])") else ("[HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m]")
+             generateArgs (c, (_, _, True)) = "(case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])" 
+             generateArgs (c, _) = "[HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m]" 
 
 generateHasFindByPrimaryKey :: TableName -> Columns -> TypeName -> PrimaryKey -> [String]
 generateHasFindByPrimaryKey t cs typeName pk =
