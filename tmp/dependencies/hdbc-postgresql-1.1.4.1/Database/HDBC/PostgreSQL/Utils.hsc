@@ -68,7 +68,7 @@ withCStringArr0 :: [SqlValue] -> (Ptr CString -> IO a) -> IO a
 withCStringArr0 inp action = withAnyArr0 convfunc freefunc inp action
     where convfunc SqlNull = return nullPtr
           convfunc (SqlEpochTime t) = do ct <- toCalendarTime $ TOD t 0
-                                         newCString (formatCalendarTime defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%S") ct)
+                                         newCString ("TIMESTAMP WITH TIME ZONE '" ++ (formatCalendarTime defaultTimeLocale (iso8601DateFormat $ Just "%H:%M:%S %Z") ct) ++"'")
           convfunc x = newCString (fromSql x)
           freefunc x =
               if x == nullPtr
