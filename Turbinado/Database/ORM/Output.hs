@@ -140,7 +140,7 @@ generateChildModelImports cs =
           map (\(_, fks, _) -> fks) $ M.elems cs
 
 generateParentModelImports t ts = 
-    map (\ptn -> "import qualified App.Models." ++ capitalizeName ptn ++ "Type as " ++ capitalizeName ptn ++ "Type\nimport qualified App.Models." ++ capitalizeName ptn ++ "Functions as " ++ capitalizeName ptn ++ "Functions") $ 
+    map (\ptn -> "import qualified App.Models.Bases." ++ capitalizeName ptn ++ "Type as " ++ capitalizeName ptn ++ "Type\nimport qualified App.Models.Bases." ++ capitalizeName ptn ++ "Functions as " ++ capitalizeName ptn ++ "Functions") $ 
       nub $ filter (not . null) $ 
         map parentFilter $ M.assocs ts
     where parentFilter (ptn, (cs, _)) = 
