@@ -255,11 +255,9 @@ generateIsModel t cs typeName =
        where generateQs   :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
              generateQs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("\" ++ (case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"") else "?"
              generateQs (c, (_, _, True)) = "\" ++ (case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"" 
-             generateQs (c, _) = "?" 
              generateArgs :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
              generateArgs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("(case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])") else ("[HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m]")
              generateArgs (c, (_, _, True)) = "(case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])" 
-             generateArgs (c, _) = "[HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m]" 
 
 generateHasFindByPrimaryKey :: TableName -> Columns -> TypeName -> PrimaryKey -> [String]
 generateHasFindByPrimaryKey t cs typeName pk =
@@ -299,11 +297,8 @@ generateHasChildren_t t cn (_, fks, _) typeName = unlines $ map (\(fkt, fkc) -> 
 generateHasChildren_t_k :: TableName -> ColumnName -> TableName -> ColumnName -> TypeName -> String
 generateHasChildren_t_k t cn fkt fkc typeName = 
   unlines $
-    ["class " ++ capitalizeName t ++ "Has" ++ capitalizeName fkt ++ "ForeignKey parent where"
-    ,"    findAllChild" ++ capitalizeName fkt  ++ " :: (HasEnvironment m) => parent -> m [" ++ capitalizeName fkt ++ "Type." ++ capitalizeName fkt ++ "]"
-    ,""
-    ,"instance " ++ capitalizeName t ++ "Has" ++ capitalizeName fkt ++ "ForeignKey (" ++ capitalizeName t ++ ") where"
-    ,"    findAllChild" ++ capitalizeName fkt ++ " p = " ++ capitalizeName fkt ++ "Functions.findAllWhere \"" ++ fkc ++ " = ?\" [HDBC.toSql $ " ++ partiallyCapitalizeName cn ++ " p]"
+    ["findAllChild" ++ capitalizeName fkt  ++ " :: (HasEnvironment m) => " ++ capitalizeName t ++ " -> m [" ++ capitalizeName fkt ++ "Type." ++ capitalizeName fkt ++ "]"
+    ,"findAllChild" ++ capitalizeName fkt ++ " p = findAllWhere \"" ++ fkc ++ " = ?\" [HDBC.toSql $ " ++ partiallyCapitalizeName cn ++ " p]"
     ]
 
 
@@ -320,7 +315,7 @@ generateHasParent_t :: TableName -> ColumnName -> TableName -> ColumnName -> Str
 generateHasParent_t ptn pcn ctn ccn = 
   unlines $
     ["parent" ++ capitalizeName ptn ++ " :: (HasEnvironment m) => " ++ capitalizeName ctn ++ " -> m " ++ capitalizeName ptn ++ "Type." ++ capitalizeName ptn
-    ,"parent" ++ capitalizeName ptn ++ " self = " ++ capitalizeName ptn ++ "Functions.findAllWhere \"" ++ pcn ++ " = ?\" [HDBC.toSql $ " ++ partiallyCapitalizeName ccn ++ " self]"
+    ,"parent" ++ capitalizeName ptn ++ " self = findOneWhere \"" ++ pcn ++ " = ?\" [HDBC.toSql $ " ++ partiallyCapitalizeName ccn ++ " self]"
     ]
 
 
