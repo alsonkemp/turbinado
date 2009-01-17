@@ -53,6 +53,8 @@ options =
     , Option ['h','?'] ["help"] (NoArg Help)                        "show this message"
     ]
 
+-- | Handle a few options, then kick off the server.
+main :: IO ()
 main =
     do args <- getArgs
        case getOpt Permute options args of
@@ -63,13 +65,18 @@ main =
      header = "Usage: turbinado [OPTION]"
 
 
+-- | Starts the server, builds the basic 'Environment', builds the 'WorkerPool',
+-- starts listening on the specified port.  As soon as a request is noticed, 
+-- it's handed off to a 'WorkerThread' to be handled.  Lather, Rinse, Repeat.
 startServer :: PortNumber -> IO ()
 startServer pnr
     = withSocketsDo $ 
       do e <- runController 
                (sequence_ $ [ addLoggerToEnvironment
                             , addCodeStoreToEnvironment
-                            , addMimeTypesToEnvironment "Config/mime.types"]
+                            , addMimeTypesToEnvironment "Config/mime.types"
+                            , addRoutesToEnvironment
+                            ]
                             ++ customSetupFilters
                ) 
                newEnvironment
@@ -89,6 +96,8 @@ startServer pnr
 -- | Worker stuff
 ------------------------------------------------
 
+-- | The basic loop for a 'WorkerThread': get the socket from the server mainloop,
+-- receive a request, handle it, then put myself back into the 'WorkerPool'.
 workerLoop :: MVar WorkerPool ->
               Environment ->
               Chan Socket      ->
@@ -102,6 +111,8 @@ workerLoop workerPoolMVar e chan
                putWorkerThread workerPoolMVar chan
                mainLoop
 
+-- | Basic request handling: setup the 'Environment' for this request,
+-- run the real requestHandler, then ship the response back to the client.
 handleRequest :: Socket -> Environment -> IO ()
 handleRequest sock e
     = (do mytid <- myThreadId
@@ -109,7 +120,7 @@ handleRequest sock e
                                          , addSettingsToEnvironment
                                          , receiveRequest sock
                                          , tryStaticContent 
-                                         , addRoutesToEnvironment ]) e
+                                         ]) e
           case (isResponseComplete e') of
             True  -> sendResponse sock e'
             False -> do e'' <- runController requestHandler e'
@@ -125,14 +136,23 @@ handleRequest sock e
 -- | Worker Pool stuff
 ------------------------------------------------
 
-type ExpiresTime = UTCTime
-data WorkerThread = WorkerThread ThreadId (Chan Socket)
+-- | The 'WorkerPool' holds each idle or busy 'WorkerThread'.
+-- When all 'WorkerThread's are busy, more are created by
+-- 'getWorkerThread' and added to the 'WorkerPool'.
 data WorkerPool = WorkerPool { numWorkers :: Int,
                                idleWorkers :: [WorkerThread],
                                busyWorkers :: [(WorkerThread, ExpiresTime)]}
 
--- TODO: add a Maximum # of threads
---getWorkerThread :: MVar WorkerPool -> IO WorkerThread
+-- | Each 'WorkerThread' has a 'ThreadId' and a 'Channel' for communication.
+data WorkerThread = WorkerThread ThreadId (Chan Socket)
+
+-- | 'ExpiresTime' is the time at which a 'WorkerThread' will be killed if it
+-- has not completed its 'Request'.
+type ExpiresTime = UTCTime
+
+-- | 'getWorkerThread' returns a 'WorkerThread'.  If all threads are busy,
+-- a new WorkerThread is created and returned.
+getWorkerThread :: MVar WorkerPool -> Environment -> IO WorkerThread
 getWorkerThread mv e = 
   do wp <- takeMVar mv
      case wp of
@@ -149,6 +169,9 @@ getWorkerThread mv e =
             putMVar mv $ WorkerPool n idles ((idle, expiresTime):busies)
             return idle
 
+-- | 'putWorkerThread' puts a 'WorkerThread' back into the 'WorkerPool'.  This function
+-- is used by the thread to put *itself* back into the pool.
+putWorkerThread :: MVar WorkerPool -> Chan Socket -> IO () 
 putWorkerThread mv chan = do
                WorkerPool n is bs <- takeMVar mv
                mytid <- myThreadId
@@ -156,13 +179,6 @@ putWorkerThread mv chan = do
                putMVar mv $ WorkerPool n ((WorkerThread mytid chan):is) bs'
 
 
-
-timeout :: Int -> ThreadId -> IO ()
-timeout time thid
-    = do threadDelay time
-         throwTurbinadoTo thid TimedOut
-
--- conf. files? Indeed!
 stdTimeOut :: Integer
 stdTimeOut = 90
 

@@ -1,4 +1,6 @@
-module Turbinado.Database.ORM.Generator where
+module Turbinado.Database.ORM.Generator (
+  generateModels
+) where
 
 import Control.Monad
 import Data.List
@@ -11,6 +13,8 @@ import Turbinado.Database.ORM.Types
 import Turbinado.Database.ORM.Output
 import Turbinado.Database.ORM.PostgreSQL
 
+-- | Outputs ORM models to App/Models.  User configurable files
+-- are in App/Models.  Machine generated files are in App/Models/Bases.
 generateModels ::  IO ()
 generateModels = do conn <- fromJust databaseConnection
                     ts <- getTables conn

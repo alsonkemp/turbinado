@@ -11,8 +11,8 @@ import Config.App
 
 compileArgs =
         [ "-fglasgow-exts"
-        , "-fallow-overlapping-instances"
-        , "-fallow-undecidable-instances"
+        , "-XOverlappingInstances"
+        , "-XUndecidableInstances"
         , "-F", "-pgmFtrhsx"
         , "-fno-warn-overlapping-patterns" 
         , "-odir " ++ compiledDir
@@ -28,6 +28,7 @@ mUserPkgConf = [""]
 
 layoutDir      = "App/Layouts"
 layoutStub     = "Turbinado/Stubs/Layout.hs"
+configDir = "Config"
 modelDir       = "App/Models"
 viewDir        = "App/Views"
 viewStub       = "Turbinado/Stubs/View.hs"
@@ -37,8 +38,6 @@ componentViewDir        = "App/Components/Views"
 componentViewStub       = "Turbinado/Stubs/ComponentView.hs"
 componentControllerDir  = "App/Components/Controllers"
 componentControllerStub = "Turbinado/Stubs/ComponentController.hs"
-
-configDir = "Config"
 
 staticDirs = ["static", "tmp/cache"]
 compiledDir = "tmp/compiled"

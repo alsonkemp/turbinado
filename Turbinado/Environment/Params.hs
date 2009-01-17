@@ -12,16 +12,22 @@ import Turbinado.Environment.Header
 import Turbinado.Environment.Request
 import Turbinado.Environment.Types
 
-getParam_u :: (HasEnvironment m) => String -> m String
-getParam_u p =  do r <- getParam p
-                   return $ fromJust r
-
+-- | Attempt to get a Parameter from the Request query string
+-- or POST body.
 getParam :: (HasEnvironment m) => String -> m (Maybe String)
 getParam p = do r <- getParamFromQueryString p
                 case r of
                   Just r' -> return r
                   Nothing -> getParamFromBody p
                 
+-- | An unsafe version of getParam.  Errors if the key does not exist.
+getParam_u :: (HasEnvironment m) => String -> m String
+getParam_u p =  do r <- getParam p
+                   maybe (error $ "getParam_u : key does not exist - \"" ++ p ++ "\"")
+                         return
+                         r
+
+-- Functions used by getParam.  Not exported.
 getParamFromQueryString :: (HasEnvironment m) => String -> m (Maybe String)
 getParamFromQueryString s = do e <- getEnvironment
                                let qs = uriQuery $ rqURI (fromJust $ getRequest e)

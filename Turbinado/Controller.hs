@@ -15,6 +15,7 @@ module Turbinado.Controller (
 
         module Data.Maybe,
 
+        module Config.Master,
         module Turbinado.Environment.CodeStore,
         module Turbinado.Environment.Header,
         module Turbinado.Environment.Logger,
@@ -35,6 +36,7 @@ import qualified Network.HTTP as HTTP
 import Prelude hiding (catch)
 import qualified Database.HDBC as HDBC
 
+import Config.Master
 import Turbinado.Environment.CodeStore
 import Turbinado.Environment.Database
 import Turbinado.Environment.Header

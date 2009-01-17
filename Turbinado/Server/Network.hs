@@ -16,13 +16,16 @@ import Turbinado.Environment.Response
 import Network.HTTP
 
 
+-- | Read the request from client.
 receiveRequest :: Socket -> Controller ()
 receiveRequest sock = do
         req <- liftIO $ receiveHTTP sock
         case req of
-         Left _ -> throwTurbinado $ BadRequest "Looks as though we've got a bad request, sir"
+         Left e -> throwTurbinado $ BadRequest $ "In receiveRequest : " ++ show e
          Right r  -> do e <- get
                         put $ e {getRequest = Just r}
 
+-- | Get the 'Response' from the 'Environment' and send
+-- it back to the client.
 sendResponse :: Socket -> Environment -> IO ()
 sendResponse sock e = respondHTTP sock $ fromJust $ getResponse e

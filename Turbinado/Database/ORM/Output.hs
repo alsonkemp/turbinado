@@ -19,7 +19,7 @@ type TypeName = String
 writeModels ts = 
   do writeFile "App/Models/Bases/Common.hs" generateCommon
      mapM_ (\(t, (cs, pk)) -> 
-                 let typeName = (capitalizeName t) in
+                 let typeName = (toType t) in
                  do e <- doesFileExist (joinPath ["App/Models", typeName ++ ".hs"])
                     when (not e) (writeFile (joinPath ["App/Models", typeName++".hs"]) (generateModelFile typeName) ) 
                     writeFile (joinPath ["App/Models/Bases", typeName ++ "Type.hs"]) (generateType t typeName pk ts cs)
@@ -95,7 +95,14 @@ generateFunctions t typeName pk ts cs =
   generateHasFindByPrimaryKey t cs typeName pk ++
   [""] ++
   generateIsModel t cs typeName
-
+  ++
+  [""
+  ,"deleteWhere :: (HasEnvironment m) => SelectString -> SelectParams -> m Integer"
+  ,"deleteWhere ss sp = do"
+  ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+  ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\"DELETE FROM " ++ t++ " WHERE (\" ++ ss ++ \") \")  sp"
+  ,"        return res"
+  ]
 generateRelations ::  TableName ->
                       TypeName ->
                       PrimaryKey -> 
@@ -134,13 +141,13 @@ generateRelations t typeName pk ts cs =
   generateHasParents t ts
 
 generateChildModelImports cs = 
-    map (\ctn -> "import qualified App.Models.Bases." ++ capitalizeName ctn ++ "Type as " ++ capitalizeName ctn ++ "Type\nimport qualified App.Models.Bases." ++ capitalizeName ctn ++ "Functions as " ++ capitalizeName ctn ++ "Functions") $ 
+    map (\ctn -> "import qualified App.Models.Bases." ++ toType ctn ++ "Type as " ++ toType ctn ++ "Type\nimport qualified App.Models.Bases." ++ toType ctn ++ "Functions as " ++ toType ctn ++ "Functions") $ 
       nub $
         map fst $ concat $
           map (\(_, fks, _) -> fks) $ M.elems cs
 
 generateParentModelImports t ts = 
-    map (\ptn -> "import qualified App.Models.Bases." ++ capitalizeName ptn ++ "Type as " ++ capitalizeName ptn ++ "Type\nimport qualified App.Models.Bases." ++ capitalizeName ptn ++ "Functions as " ++ capitalizeName ptn ++ "Functions") $ 
+    map (\ptn -> "import qualified App.Models.Bases." ++ toType ptn ++ "Type as " ++ toType ptn ++ "Type\nimport qualified App.Models.Bases." ++ toType ptn ++ "Functions as " ++ toType ptn ++ "Functions") $ 
       nub $ filter (not . null) $ 
         map parentFilter $ M.assocs ts
     where parentFilter (ptn, (cs, _)) = 
@@ -204,7 +211,8 @@ generateCommon = unlines $
   ,"class (DatabaseModel model) =>"
   ,"        HasFindByPrimaryKey model primaryKey | model -> primaryKey where"
   ,"    find   :: (HasEnvironment m) => primaryKey -> m model"
-  ,"    update :: (HasEnvironment m) => model      -> m ()   "
+  ,"    delete :: (HasEnvironment m) => primaryKey -> m ()"
+  ,"    update :: (HasEnvironment m) => model      -> m ()"
   ,""
   ]
 
@@ -218,11 +226,18 @@ generateIsModel t cs typeName =
     ,"    insert m returnId = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
     ,"        res  <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\" INSERT INTO " ++ t ++ " (" ++ (intercalate "," $ M.keys cs) ++") VALUES (" ++ (intercalate "," $ map generateQs (M.assocs cs) ) ++ ")\")  ( " ++ (intercalate " ++ " $ filter (not . null) $ map generateArgs (M.assocs cs) ) ++ ")"
-    ,"        liftIO $ HDBC.handleSqlError $ HDBC.commit conn"
-    ,"        if returnId"
-    ,"          then do i <- liftIO $ HDBC.catchSql (HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Int)]]) ) "
-    ,"                  return $ HDBC.fromSql $ head $ head i"
-    ,"          else return Nothing"
+    ,"        case res of"
+    ,"          0 -> (liftIO $ HDBC.handleSqlError $ HDBC.rollback conn) >>"
+    ,"               (throwDyn $ HDBC.SqlError"
+    ,"                           {HDBC.seState = \"\","
+    ,"                            HDBC.seNativeError = (-1),"
+    ,"                            HDBC.seErrorMsg = \"Rolling back.  No record inserted :" ++ t ++ " : \" ++ (show m)"
+    ,"                           })"
+    ,"          1 -> liftIO $ HDBC.handleSqlError $ HDBC.commit conn >>"
+    ,"               if returnId"
+    ,"                 then do i <- liftIO $ HDBC.catchSql (HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Integer)]]) ) "
+    ,"                         return $ HDBC.fromSql $ head $ head i"
+    ,"               else return Nothing"
     ,"    findAll = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
     ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT " ++ cols cs ++ " FROM " ++ t ++ "\" []"
@@ -233,11 +248,11 @@ generateIsModel t cs typeName =
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findAllOrderBy op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY ?\") [HDBC.toSql op]"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY \" ++ op) []"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findAllWhereOrderBy ss sp op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY ? \")  (sp ++ [HDBC.toSql op])"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY \" ++ op) sp"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findOneWhere ss sp = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
@@ -245,19 +260,19 @@ generateIsModel t cs typeName =
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
     ,"    findOneOrderBy op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY ? LIMIT 1\")  [HDBC.toSql op]"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY \" ++ op ++ \" LIMIT 1\")  []"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
     ,"    findOneWhereOrderBy ss sp op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY ? LIMIT 1\")  (sp ++ [HDBC.toSql op])"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY \" ++ op ++\" LIMIT 1\")  sp"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
      ]
        where generateQs   :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
-             generateQs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("\" ++ (case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"") else "?"
-             generateQs (c, (_, _, True)) = "\" ++ (case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"" 
+             generateQs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("\" ++ (case (" ++ toFunction c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"") else "?"
+             generateQs (c, (_, _, True)) = "\" ++ (case (" ++ toFunction c ++ " m) of Nothing -> \"DEFAULT\"; Just x -> \"?\") ++ \"" 
              generateArgs :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
-             generateArgs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("(case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])") else ("[HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m]")
-             generateArgs (c, (_, _, True)) = "(case (" ++ partiallyCapitalizeName c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])" 
+             generateArgs (c, (desc, _, False)) = if ((colNullable desc) == Just True) then ("(case (" ++ toFunction c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])") else ("[HDBC.toSql $ " ++ toFunction c ++ " m]")
+             generateArgs (c, (_, _, True)) = "(case (" ++ toFunction c ++ " m) of Nothing -> []; Just x -> [HDBC.toSql x])" 
 
 generateHasFindByPrimaryKey :: TableName -> Columns -> TypeName -> PrimaryKey -> [String]
 generateHasFindByPrimaryKey t cs typeName pk =
@@ -280,10 +295,28 @@ generateHasFindByPrimaryKey t cs typeName pk =
          ,"                            HDBC.seErrorMsg = \"Too many records found when finding by Primary Key:" ++ t ++ " : \" ++ (show pk)"
          ,"                           }"
          ,""
+         ,"    delete pk@(" ++ (concat $ intersperse ", " $ map (\i -> "pk"++(show i)) [1..(length pk)]) ++ ") = do"
+         ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
+         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\"DELETE FROM " ++ t ++ " WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
+         ,"        case res of"
+         ,"          0 -> (liftIO $ HDBC.handleSqlError $ HDBC.rollback conn) >>"
+         ,"               (throwDyn $ HDBC.SqlError"
+         ,"                           {HDBC.seState = \"\","
+         ,"                            HDBC.seNativeError = (-1),"
+         ,"                            HDBC.seErrorMsg = \"Rolling back.  No record found when deleting by Primary Key:" ++ t ++ " : \" ++ (show pk)"
+         ,"                           })"
+         ,"          1 -> (liftIO $ HDBC.handleSqlError $ HDBC.commit conn) >> return ()"
+         ,"          _ -> (liftIO $ HDBC.handleSqlError $ HDBC.rollback conn) >>"
+         ,"               (throwDyn $ HDBC.SqlError"
+         ,"                           {HDBC.seState = \"\","
+         ,"                            HDBC.seNativeError = (-1),"
+         ,"                            HDBC.seErrorMsg = \"Rolling back.  Too many records deleted when deleting by Primary Key:" ++ t ++ " : \" ++ (show pk)"
+         ,"                           })"
+         ,""
          ,"    update m = do"
          ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
          ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn \"UPDATE " ++ t ++ " SET (" ++ (unwords $ intersperse "," $ M.keys cs) ++ ") = (" ++ (intercalate "," $ (take (M.size cs) (repeat "?"))) ++ ") WHERE (" ++ (generatePrimaryKeyWhere pk)  ++")\""
-         ,"                  [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m") (M.keys cs) ) ++ ", " ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ partiallyCapitalizeName c ++ " m") pk ) ++ "]"
+         ,"                  [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ toFunction c ++ " m") (M.keys cs) ) ++ ", " ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ toFunction c ++ " m") pk ) ++ "]"
          ,"        liftIO $ HDBC.handleSqlError $ HDBC.commit conn"
          ,"        return ()"
          ]
@@ -297,8 +330,8 @@ generateHasChildren_t t cn (_, fks, _) typeName = unlines $ map (\(fkt, fkc) -> 
 generateHasChildren_t_k :: TableName -> ColumnName -> TableName -> ColumnName -> TypeName -> String
 generateHasChildren_t_k t cn fkt fkc typeName = 
   unlines $
-    ["findAllChild" ++ capitalizeName fkt  ++ " :: (HasEnvironment m) => " ++ capitalizeName t ++ " -> m [" ++ capitalizeName fkt ++ "Type." ++ capitalizeName fkt ++ "]"
-    ,"findAllChild" ++ capitalizeName fkt ++ " p = findAllWhere \"" ++ fkc ++ " = ?\" [HDBC.toSql $ " ++ partiallyCapitalizeName cn ++ " p]"
+    ["findAllChild" ++ toType fkt  ++ " :: (HasEnvironment m) => " ++ toType t ++ " -> m [" ++ toType fkt ++ "Type." ++ toType fkt ++ "]"
+    ,"findAllChild" ++ toType fkt ++ " p = findAllWhere \"" ++ fkc ++ " = ?\" [HDBC.toSql $ " ++ toFunction cn ++ " p]"
     ]
 
 
@@ -314,8 +347,8 @@ generateHasParents ctn ts =
 generateHasParent_t :: TableName -> ColumnName -> TableName -> ColumnName -> String
 generateHasParent_t ptn pcn ctn ccn = 
   unlines $
-    ["parent" ++ capitalizeName ptn ++ " :: (HasEnvironment m) => " ++ capitalizeName ctn ++ " -> m " ++ capitalizeName ptn ++ "Type." ++ capitalizeName ptn
-    ,"parent" ++ capitalizeName ptn ++ " self = findOneWhere \"" ++ pcn ++ " = ?\" [HDBC.toSql $ " ++ partiallyCapitalizeName ccn ++ " self]"
+    ["parent" ++ toType ptn ++ " :: (HasEnvironment m) => " ++ toType ctn ++ " -> m " ++ toType ptn ++ "Type." ++ toType ptn
+    ,"parent" ++ toType ptn ++ " self = findOneWhere \"" ++ pcn ++ " = ?\" [HDBC.toSql $ " ++ toFunction ccn ++ " self]"
     ]
 
 
@@ -340,7 +373,7 @@ cols cs = unwords $  intersperse "," $ M.keys cs
 
 columnToFieldLabel :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
 columnToFieldLabel cd@(name, (desc, _, _)) =
-  "    " ++ partiallyCapitalizeName name  ++ " :: " ++ 
+  "    " ++ toFunction name  ++ " :: " ++ 
   maybeColumnLabel cd ++
   getHaskellTypeString (colType desc)
 
@@ -372,26 +405,13 @@ getHaskellTypeString    SqlUTCTimeT = "TimeDiff"
 getHaskellTypeString    _ = error "Don't know how to translate this SqlTypeId to a SqlValue"
 
 
---type SelectParameters = String
-
---class TableType a where
---  find   :: (IConnection conn) => conn -> Int -> a
---  findBy :: (IConnection conn) => conn -> SelectParameters -> [a]
-
---  
--- Converts "column_name" to "ColumnName" (for types)
---
-capitalizeName [] = error "capitalizeName passed an empty string"
-capitalizeName (colname':colname) =
-     concat
-      (map (\(s:ss) -> (Data.Char.toUpper s) : ss) $
-        words $ (Data.Char.toUpper colname') : 
-          map (\c -> if (c=='_') then ' ' else c) colname)
+-- | Used for safety.  Lowercases the first letter to 
+-- make a valid function.
+toFunction [] = error "toFunction passed an empty string"
+toFunction (firstLetter:letters) = (Data.Char.toLower firstLetter) : letters
 
 
---  
--- Converts "column_name" to "columnName" (for functions)
---
-partiallyCapitalizeName colname =
-  (\(s:ss) -> (Data.Char.toLower s) : ss) $
-   capitalizeName colname 
+-- | Used for safety.  Uppercases the first letter to 
+-- make a valid type.
+toType [] = error "toType passed an empty string"
+toType (firstLetter:letters) = (Data.Char.toUpper firstLetter) : letters

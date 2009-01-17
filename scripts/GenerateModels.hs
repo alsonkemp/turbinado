@@ -4,5 +4,4 @@ import Config.Master
 
 main = do putStrLn "Generation starting."
           generateModels
-          putStrLn "Generation completed."
-          putStrLn "Have a gander at App/Models."
+          putStrLn "Generation completed.  Models are in App/Models."
