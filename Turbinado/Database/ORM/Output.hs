@@ -56,7 +56,7 @@ generateType t typeName pk ts cs =
   [ "data " ++ typeName ++ " = " ++ typeName ++ " {"
   ] ++
   [intercalate ",\n" (map columnToFieldLabel (M.toList cs))] ++
-  [ "    } deriving (Eq, Show)"
+  [ "    } deriving (Eq, Show, Typeable)"
   , ""
   , "instance DatabaseModel " ++ typeName ++ " where"
   , "    tableName _ = \"" ++ t ++ "\""
