@@ -84,7 +84,7 @@ insertView c a =
 insertComponent :: String -> String -> [(String, String)] -> View XML
 insertComponent controller action opts =
            do debugM $ " insertComponent: Starting"
-              p <- retrieveCode CTComponentController (controller,  (toLower $ head action) : (tail action))
+              p <- retrieveCode CTComponentController (joinPath [controller,"Controller"],  (toLower $ head action) : (tail action))
               case p of
                  CodeLoadMissing                    ->    return $ cdata $ "insertComponent error: code missing : " ++ controller ++ " - " ++ action
                  CodeLoadFailure e                  ->    return $ cdata $ "insertComponent error: " ++ e
@@ -100,7 +100,7 @@ insertComponent controller action opts =
 insertComponentView :: Environment -> String -> String -> View XML
 insertComponentView oldE controller action =
            do debugM $ " insertComponentView: Starting"
-              v  <- retrieveCode CTComponentView (joinPath [controller, action], "markup")
+              v  <- retrieveCode CTComponentView (joinPath [controller, "Views", action], "markup")
               case v of
                  CodeLoadMissing                    -> do setEnvironment oldE
                                                           return $ cdata $ "insertComponentView error: code missing : " ++ (joinPath [controller, action]) ++ " - markup"

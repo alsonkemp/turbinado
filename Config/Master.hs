@@ -34,9 +34,9 @@ viewDir        = "App/Views"
 viewStub       = "Turbinado/Stubs/View.hs"
 controllerDir  = "App/Controllers"
 controllerStub = "Turbinado/Stubs/Controller.hs"
-componentViewDir        = "App/Components/Views"
+componentViewDir        = "App/Components"
 componentViewStub       = "Turbinado/Stubs/ComponentView.hs"
-componentControllerDir  = "App/Components/Controllers"
+componentControllerDir  = "App/Components"
 componentControllerStub = "Turbinado/Stubs/ComponentController.hs"
 
 staticDirs = ["static", "tmp/cache"]

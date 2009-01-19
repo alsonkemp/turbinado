@@ -80,6 +80,10 @@ getController = do c <- getSetting_u "controller"
                              actionName a)
                                where actionName s = (toLower $ head s) : (tail s)
 
+-- | Tells the 'Controller' to use a particular 'Layout' for the 'View'.
+setLayout :: (HasEnvironment m) => String -> m ()
+setLayout l = setSetting "layout" l
+
 -- | Tells the 'Controller' not to use a 'Layout' for the 'View'.
 clearLayout :: (HasEnvironment m) => m ()
 clearLayout = unsetSetting "layout"
