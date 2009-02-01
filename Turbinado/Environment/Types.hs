@@ -14,7 +14,6 @@ import HSX.XMLGenerator (XMLGenT(..), unXMLGenT)
 import Turbinado.View.XML
 import Config.Master
 import System.Time
-import System.Plugins
 
 
 -- | The class of types which hold an 'Environment'.
@@ -65,10 +64,10 @@ data CodeStore  = CodeStore (MVar CodeMap)
 type CodeMap    = M.Map CodeLocation CodeStatus
 data CodeStatus = CodeLoadMissing |
                   CodeLoadFailure String |
-                  CodeLoadController          (StateT Environment IO ())                 Module CodeDate |
-                  CodeLoadView                (XMLGenT (StateT Environment IO) XML     ) Module CodeDate |
-                  CodeLoadComponentController (StateT Environment IO ())                 Module CodeDate |
-                  CodeLoadComponentView       (XMLGenT (StateT Environment IO) XML     ) Module CodeDate
+                  CodeLoadController          (StateT Environment IO ())                 CodeDate |
+                  CodeLoadView                (XMLGenT (StateT Environment IO) XML     ) CodeDate |
+                  CodeLoadComponentController (StateT Environment IO ())                 CodeDate |
+                  CodeLoadComponentView       (XMLGenT (StateT Environment IO) XML     ) CodeDate
 
 --
 -- * Types for Database

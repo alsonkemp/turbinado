@@ -21,7 +21,6 @@ import Network.URI
 import Prelude hiding (catch)
 import System.Directory
 import System.FilePath
-import System.Plugins
 import Control.Monad
 import Data.Maybe
 import Data.List
@@ -85,10 +84,10 @@ retrieveAndRunController =
                 False -> do co <- getController
                             p  <- retrieveCode CTController co
                             case p of
-                              CodeLoadController p' _ _ -> p'
-                              CodeLoadFailure    e      -> errorResponse e
-                              CodeLoadView       _  _ _ -> error "retrieveAndRunController: retrieveCode called, but returned CodeLoadView"
-                              CodeLoadMissing           -> error "retrieveAndRunController: retrieveCode called, but returned CodeLoadMissing"
+                              CodeLoadController p' _ -> p'
+                              CodeLoadFailure    e    -> errorResponse e
+                              CodeLoadView       _  _ -> error "retrieveAndRunController: retrieveCode called, but returned CodeLoadView"
+                              CodeLoadMissing         -> error "retrieveAndRunController: retrieveCode called, but returned CodeLoadMissing"
 
 -- | This function dynamically loads (if needed) the 'View'
 -- using the information provided by the 'Routes'.  Views reside
@@ -109,9 +108,9 @@ retrieveAndRunLayout =
                                                    retrieveCode CTView v    -- If no Layout, then pull a View
                                      Just l' ->    retrieveCode CTLayout (l', "markup")
                             case p of
-                              CodeLoadView       p' _ _ -> evalView p'
-                              CodeLoadFailure    e      -> errorResponse e
-                              CodeLoadController _  _ _ -> error "retrieveAndRunLayout: retrieveCode called, but returned CodeLoadController"
-                              CodeLoadMissing           -> error "retrieveAndRunLayout: retrieveCode called, but returned CodeLoadMissing"
+                              CodeLoadView       p' _ -> evalView p'
+                              CodeLoadFailure    e    -> errorResponse e
+                              CodeLoadController _  _ -> error "retrieveAndRunLayout: retrieveCode called, but returned CodeLoadController"
+                              CodeLoadMissing         -> error "retrieveAndRunLayout: retrieveCode called, but returned CodeLoadMissing"
 
 

@@ -1,4 +1,0 @@
-Couldn't match `API.Interface' against `Int -> Int'
-	Expected type: API.Interface
-	Inferred type: Int -> Int
-didn't compile

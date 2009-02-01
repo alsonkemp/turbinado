@@ -4,11 +4,11 @@ module Turbinado.Server.Exception (
         , catchTurbinado
         , throwTurbinado
         , throwTurbinadoTo
-        , module Control.Exception 
+        , module Control.OldException 
         ) where
 
 import Data.Typeable
-import Control.Exception
+import Control.OldException
 import Control.Concurrent(ThreadId)
 
 catchTurbinado :: IO a -> (TurbinadoException -> IO a) -> IO a

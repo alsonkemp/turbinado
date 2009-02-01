@@ -1,4 +1,0 @@
-default: all
-TOP             = @TOP@
-GHC             = @GHC@
-GLASGOW_HASKELL = @GLASGOW_HASKELL@

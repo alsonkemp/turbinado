@@ -97,7 +97,7 @@ tagParser = do     t <- optionMaybe tagParser'
                                , intercalate ", " $ filter (not . null) 
                                    [ (maybe "" (\i' -> "strAttr \"id\" \"" ++ i' ++ "\"") i)
                                    , (maybe "" (\c' -> "strAttr \"class\" \"" ++ (intercalate " " c') ++ "\"") c)
-                                   , (maybe "" (\kv -> intercalate ", " $ map (\(k,v) -> "strAttr \"" ++ k ++ "\" \"" ++ v ++ "\"") kv) a)
+                                   , (maybe "" (\kv -> intercalate ", " $ map (\(k,v) -> "strAttr \"" ++ k ++ "\" (" ++ v ++ ")") kv) a)
                                    ]
                                , "]"]
                            )

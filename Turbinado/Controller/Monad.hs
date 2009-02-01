@@ -10,7 +10,7 @@ module Turbinado.Controller.Monad (
         liftIO, catch
         ) where
 
-import Control.Exception (catchDyn)
+import Control.OldException (catchDyn)
 
 import Control.Monad.State
 import Control.Monad.Trans (MonadIO(..), liftIO)

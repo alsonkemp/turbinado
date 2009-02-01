@@ -24,7 +24,7 @@ module Turbinado.View (
         module Turbinado.Environment.ViewData
         ) where
 
-import Control.Exception (catchDyn)
+import Control.OldException (catchDyn)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans (MonadIO(..))
@@ -68,8 +68,8 @@ insertDefaultView =
                 debugM $ "    Layout: insertDefaultView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
                 c <- retrieveCode CTView cl
                 case c of
-                  CodeLoadView       v _ _ -> v 
-                  CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                  CodeLoadView       v _ -> v 
+                  CodeLoadController _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
                   CodeLoadFailure    e     -> return $ cdata e
 
 insertView :: String -> String -> View XML
@@ -77,8 +77,8 @@ insertView c a =
              do debugM $ "    Layout: insertView : loading   " ++ c ++ " - " ++ a
                 c <- retrieveCode CTView (c, (toLower (head a)):(tail a))
                 case c of
-                  CodeLoadView       v _ _ -> v 
-                  CodeLoadController _ _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
+                  CodeLoadView       v _ -> v 
+                  CodeLoadController _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
                   CodeLoadFailure    e     -> return $ cdata e
  
 insertComponent :: String -> String -> [(String, String)] -> View XML
@@ -88,7 +88,7 @@ insertComponent controller action opts =
               case p of
                  CodeLoadMissing                    ->    return $ cdata $ "insertComponent error: code missing : " ++ controller ++ " - " ++ action
                  CodeLoadFailure e                  ->    return $ cdata $ "insertComponent error: " ++ e
-                 CodeLoadComponentController p' _ _ -> do oldE <- getEnvironment
+                 CodeLoadComponentController p'   _ -> do oldE <- getEnvironment
                                                           mapM_ (\(k, v) -> setSetting k v) opts
                                                           lift $ p'
                                                           -- allow for overloading of the Component Controller and View
@@ -106,7 +106,7 @@ insertComponentView oldE controller action =
                                                           return $ cdata $ "insertComponentView error: code missing : " ++ (joinPath [controller, action]) ++ " - markup"
                  CodeLoadFailure e                  -> do setEnvironment oldE
                                                           return $ cdata $ "insertComponentView error: " ++ e
-                 CodeLoadComponentView v' _ _ -> do res <- v'
+                 CodeLoadComponentView v' _   -> do res <- v'
                                                     setEnvironment oldE
                                                     return res
                  _                            -> do setEnvironment oldE

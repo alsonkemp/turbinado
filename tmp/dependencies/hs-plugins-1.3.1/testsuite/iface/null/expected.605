@@ -1,5 +1,0 @@
-interface "unknown" Main
-module dependencies: A, B
-package dependencies: base-1.0, plugins-1.0
-import B
-import A

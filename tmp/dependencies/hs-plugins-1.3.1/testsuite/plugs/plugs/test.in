@@ -1,2 +1,0 @@
-let fibs = 1 : 1 : zipWith (+) fibs (tail fibs) in fibs !! 200
-:quit

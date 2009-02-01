@@ -1,9 +1,0 @@
-
-../Plugin.in:18:
-    Couldn't match `Dynamic' against `(t, t1)'
-	Expected type: Dynamic
-	Inferred type: (t, t1)
-    In the definition of `resource_dyn':
-	resource_dyn = (typeOf plugin, unsafeCoerce v)
-
-Fail: failed

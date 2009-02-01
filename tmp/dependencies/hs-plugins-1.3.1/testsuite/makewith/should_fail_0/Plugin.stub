@@ -1,6 +1,0 @@
-module Plugin ( resource ) where
-
-import API
-
-resource :: Interface
-resource = plugin

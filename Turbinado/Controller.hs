@@ -7,11 +7,16 @@ module Turbinado.Controller (
 
         redirectTo,
         -- * Database
-        quickQuery,
-        quickQuery',
-        run,
+        --quickQuery,
+        --quickQuery',
+        --run,
         HDBC.SqlValue(..),
-        HDBC.SqlType(..),
+        HDBC.toSql,
+        HDBC.fromSql,
+        HDBC.safeFromSql,
+        HDBC.nToSql,
+        HDBC.iToSql,
+        HDBC.posixToSql,
 
         module Data.Maybe,
 
@@ -27,7 +32,7 @@ module Turbinado.Controller (
         module Turbinado.Environment.ViewData
         ) where
 
-import Control.Exception (catchDyn)
+import Control.OldException (catchDyn)
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans (MonadIO(..))
@@ -65,18 +70,18 @@ redirectTo l = redirectResponse l
 -- * Database functions
 --
 
-quickQuery :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
-quickQuery s vs = do e <- get
-                     let c = fromJust $ getDatabase e
-                     liftIO $ HDBC.handleSqlError $ HDBC.quickQuery c s vs
+--quickQuery :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
+--quickQuery s vs = do e <- get
+--                     let c = fromJust $ getDatabase e
+--                     liftIO $ HDBC.handleSqlError $ HDBC.quickQuery c s vs
 
-quickQuery' :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
-quickQuery' s vs = do e <- get
-                      let c = fromJust $ getDatabase e
-                      liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' c s vs
+--quickQuery' :: String -> [HDBC.SqlValue] -> Controller [[HDBC.SqlValue]]
+--quickQuery' s vs = do e <- get
+--                      let c = fromJust $ getDatabase e
+--                      liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' c s vs
 
-run :: String -> [HDBC.SqlValue] -> Controller Integer
-run s vs    = do e <- get
-                 let c = fromJust $ getDatabase e
-                 liftIO $ HDBC.handleSqlError $  HDBC.run c s vs
+--run :: String -> [HDBC.SqlValue] -> Controller Integer
+--run s vs    = do e <- get
+--                 let c = fromJust $ getDatabase e
+--                 liftIO $ HDBC.handleSqlError $  HDBC.run c s vs
 

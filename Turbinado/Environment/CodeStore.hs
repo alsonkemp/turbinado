@@ -65,13 +65,13 @@ retrieveCode ct cl' = do
                                                   return  CodeLoadMissing
         Just (CodeLoadFailure e)            -> do debugM (fst cl ++ " : CodeLoadFailure " ) 
                                                   return (CodeLoadFailure e)
-        Just clc@(CodeLoadController _ _ _) -> do debugM (fst cl ++ " : CodeLoadController " ) 
+        Just clc@(CodeLoadController   _ _) -> do debugM (fst cl ++ " : CodeLoadController " ) 
                                                   return clc  
-        Just clv@(CodeLoadView       _ _ _) -> do debugM (fst cl ++ " : CodeLoadView" ) 
+        Just clv@(CodeLoadView         _ _) -> do debugM (fst cl ++ " : CodeLoadView" ) 
                                                   return clv
-        Just clc@(CodeLoadComponentController _ _ _) -> do debugM (fst cl ++ " : CodeLoadComponentController " ) 
+        Just clc@(CodeLoadComponentController   _ _) -> do debugM (fst cl ++ " : CodeLoadComponentController " ) 
                                                            return clc  
-        Just clv@(CodeLoadComponentView       _ _ _) -> do debugM (fst cl ++ " : CodeLoadComponentView" ) 
+        Just clv@(CodeLoadComponentView         _ _) -> do debugM (fst cl ++ " : CodeLoadComponentView" ) 
                                                            return clv
         
 -- | Checks to see if the file exists and if the file is newer than the loaded function.  If the 
@@ -129,58 +129,57 @@ makeCode :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> [Arg] -
 makeCode ct cmap cl args fp = do
     ms <- liftIO $ makeAll fp (compileArgs++args)
     case ms of
-        MakeFailure err       -> do debugM ("\tMake error : " ++ (show err)) 
-                                    return (insert cl (CodeLoadFailure $ unlines err) cmap)
-        MakeSuccess NotReq _  -> do debugM ("\tMake success : No recomp required") 
-                                    return cmap
-        MakeSuccess _      fp -> do debugM ("\tMake success : " ++ fp)
-                                    case ct of
-                                      CTLayout                -> _loadView ct cmap cl fp
-                                      CTView                  -> _loadView ct cmap cl fp
-                                      CTComponentView         -> _loadView ct cmap cl fp
-                                      CTController            -> _loadController ct cmap cl fp
-                                      CTComponentController   -> _loadController ct cmap cl fp
+            MakeFailure err       -> do debugM ("\tMake error : " ++ (show err))
+                                        return (insert cl (CodeLoadFailure $ unlines err) cmap)
+            MakeSuccess NotReq _  -> do debugM ("\tMake success : No recomp required")
+                                        return cmap
+            MakeSuccess _      fp -> do debugM ("\tMake success : " ++ fp)
+                                        case ct of
+                                          CTLayout                -> _loadView ct cmap cl args fp
+                                          CTView                  -> _loadView ct cmap cl args fp
+                                          CTComponentView         -> _loadView ct cmap cl args fp
+                                          CTController            -> _loadController ct cmap cl args fp
+                                          CTComponentController   -> _loadController ct cmap cl args fp
 
 -- | Attempt to load the code and return the 'CodeMap' with the newly loaded code in it.  This
 -- function is specialized for Views.
-_loadView :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> FilePath -> m CodeMap
-_loadView ct cmap cl fp = do
+_loadView :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> [Arg] -> FilePath -> m CodeMap
+_loadView ct cmap cl args fp = do
     debugM ("_load : " ++ (show ct) ++ " : " ++ (fst cl) ++ " : " ++ (snd cl))
     ls <- liftIO $ load_ fp [compiledDir] (snd cl)
     case ls of 
-        LoadFailure err -> do debugM ("LoadFailure : " ++ (show err)) 
-                              return (insert cl (CodeLoadFailure $ unlines err) cmap)
-        LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
-                              liftIO $ unload m
-                              t <- liftIO $ getClockTime
-                              case ct of
-                                CTLayout              -> return (insert cl (CodeLoadView f m t) cmap)
-                                CTView                -> return (insert cl (CodeLoadView f m t) cmap)
-                                CTComponentView       -> return (insert cl (CodeLoadComponentView f m t) cmap)
-                                _                     -> error $ "_loadView: passed an invalid CodeType (" ++ (show ct) ++ ")"
+                LoadFailure err -> do debugM ("LoadFailure : " ++ (show err))
+                                      return (insert cl (CodeLoadFailure $ unlines err) cmap)
+                LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
+                                      liftIO $ unload m
+                                      t <- liftIO $ getClockTime
+                                      case ct of
+                                        CTLayout              -> return (insert cl (CodeLoadView f t) cmap)
+                                        CTView                -> return (insert cl (CodeLoadView f t) cmap)
+                                        CTComponentView       -> return (insert cl (CodeLoadComponentView f t) cmap)
+                                        _                     -> error $ "_loadView: passed an invalid CodeType (" ++ (show ct)
 
 -- | Attempt to load the code and return the 'CodeMap' with the newly loaded code in it.  This
 -- function is specialized for Controllers.
-_loadController :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> FilePath -> m CodeMap
-_loadController ct cmap cl fp = do
+_loadController :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> [Arg] -> FilePath -> m CodeMap
+_loadController ct cmap cl args fp = do
     debugM ("_load : " ++ (show ct) ++ " : " ++ (fst cl) ++ " : " ++ (snd cl))
     ls <- liftIO $ load_ fp [compiledDir] (snd cl)
-    case ls of 
-        LoadFailure err -> do debugM ("LoadFailure : " ++ (show err)) 
-                              return (insert cl (CodeLoadFailure $ unlines err) cmap)
-        LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
-                              liftIO $ unload m
-                              t <- liftIO $ getClockTime
-                              case ct of
-                                CTController          -> return (insert cl (CodeLoadController f m t) cmap)
-                                CTComponentController -> return (insert cl (CodeLoadComponentController f m t) cmap)
-                                _                     -> error $ "_loadController: passed an invalid CodeType (" ++ (show ct) ++ ")"
-                              
+    case ls of
+            LoadFailure err -> do debugM ("LoadFailure : " ++ (show err))
+                                  return (insert cl (CodeLoadFailure $ unlines err) cmap)
+            LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
+                                  liftIO $ unload m
+                                  t <- liftIO $ getClockTime
+                                  case ct of
+                                    CTController          -> return (insert cl (CodeLoadController f t) cmap)
+                                    CTComponentController -> return (insert cl (CodeLoadComponentController f t) cmap)
+                                    _                     -> error $ "_loadController: passed an invalid CodeType (" ++ (show ct) ++ ")"
+
 
 -------------------------------------------------------------------------------------------------
 -- Utility functions
 -------------------------------------------------------------------------------------------------
-
 -- | Custom merge function because I don't want to have to use a custom
 -- version of Plugins (with HSX enabled)
 customMergeToDir :: (HasEnvironment m) => FilePath -> FilePath -> FilePath -> m MergeStatus
@@ -228,7 +227,7 @@ getStub ct = case ct of
 
 getDate (CodeLoadMissing) = error "getDate called with CodeLoadMissing"
 getDate (CodeLoadFailure e) = error "getDate called with CodeLoadFailure"
-getDate (CodeLoadView       _ _ d) = d
-getDate (CodeLoadController _ _ d) = d
-getDate (CodeLoadComponentView       _ _ d) = d
-getDate (CodeLoadComponentController _ _ d) = d
+getDate (CodeLoadView       _ d) = d
+getDate (CodeLoadController _ d) = d
+getDate (CodeLoadComponentView       _ d) = d
+getDate (CodeLoadComponentController _ d) = d

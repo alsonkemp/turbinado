@@ -8,16 +8,16 @@ import Config.App
 ----------------------------------------------------------------
 -- Arguments to the make system used in the Dynamic Loader
 ----------------------------------------------------------------
-
-compileArgs =
+compileArgs = 
         [ "-fglasgow-exts"
         , "-XOverlappingInstances"
         , "-XUndecidableInstances"
         , "-F", "-pgmFtrhsx"
-        , "-fno-warn-overlapping-patterns" 
+        , "-fno-warn-overlapping-patterns"
         , "-odir " ++ compiledDir
         , "-hidir " ++ compiledDir
         , "-package HDBC"
+        , "-O"
         ]
 
 mUserPkgConf = [""]

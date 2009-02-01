@@ -14,7 +14,7 @@ module Turbinado.Controller.Exception (
 	) where
 
 import Data.Typeable
-import Control.Exception (throwDyn)
+import Control.OldException (throwDyn)
 
 data Exception
 	=  ParameterLookupFailed String	-- ^ User tried to do an irrefutable parameter lookup

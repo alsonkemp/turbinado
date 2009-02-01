@@ -1,4 +1,0 @@
-Couldn't match `Int' against `[Char]'
-	Expected type: Int
-	Inferred type: [Char]
-failed!
