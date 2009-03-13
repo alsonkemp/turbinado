@@ -1,1 +1,3 @@
-Turbinado is a stab at producing a Rails-ish MVC web framework for Haskell.  A very early stab...
+Turbinado is a Rails-ish MVC web framework for Haskell.  
+See the homepage @ http://www.turbinado.org
+

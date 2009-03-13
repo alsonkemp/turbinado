@@ -1,9 +1,11 @@
 module Config.Master (
         module Config.Master,
-        module Config.App
+        module Config.App,
+        module Config.Database
         ) where
 
 import Config.App
+import Config.Database
 
 ----------------------------------------------------------------
 -- Arguments to the make system used in the Dynamic Loader

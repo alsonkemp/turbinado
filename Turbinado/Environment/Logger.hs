@@ -11,6 +11,7 @@ import Data.Dynamic
 import Data.Maybe
 import System.IO.Unsafe
 
+import Turbinado.Utility.Data
 
 addLoggerToEnvironment :: (HasEnvironment m) => m ()
 addLoggerToEnvironment = do e <- getEnvironment
@@ -21,11 +22,11 @@ addLoggerToEnvironment = do e <- getEnvironment
 
 takeLoggerLock :: (HasEnvironment m) => m ()
 takeLoggerLock = do e <- getEnvironment
-                    liftIO $ takeMVar (fromJust $ getLoggerLock e)
+                    liftIO $ takeMVar (fromJust' "Logger: takeLoggerLock" $ getLoggerLock e)
 
 putLoggerLock  :: (HasEnvironment m) => m ()
 putLoggerLock =  do e <- getEnvironment
-                    liftIO $ putMVar (fromJust $ getLoggerLock e) ()
+                    liftIO $ putMVar (fromJust' "Logger: putLoggerLock" $ getLoggerLock e) ()
 
 wrapLoggerLock :: (HasEnvironment m) => (String -> IO ()) -> String -> m ()
 wrapLoggerLock lf s = do takeLoggerLock

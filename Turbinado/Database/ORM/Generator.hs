@@ -8,7 +8,7 @@ import qualified Data.Map as M
 import Data.Maybe
 import Database.HDBC
 
-import Config.Master
+import Config.Database
 import Turbinado.Database.ORM.Types
 import Turbinado.Database.ORM.Output
 import Turbinado.Database.ORM.PostgreSQL

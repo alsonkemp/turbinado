@@ -11,6 +11,7 @@ import Network.URI
 import Turbinado.Environment.Header
 import Turbinado.Environment.Request
 import Turbinado.Environment.Types
+import Turbinado.Utility.Data
 
 -- | Attempt to get a Parameter from the Request query string
 -- or POST body.
@@ -30,14 +31,14 @@ getParam_u p =  do r <- getParam p
 -- Functions used by getParam.  Not exported.
 getParamFromQueryString :: (HasEnvironment m) => String -> m (Maybe String)
 getParamFromQueryString s = do e <- getEnvironment
-                               let qs = uriQuery $ rqURI (fromJust $ getRequest e)
+                               let qs = uriQuery $ rqURI (fromJust' "Params : getParamFromQueryString" $ getRequest e)
                                return $ lookup s $ formDecode qs
 
 getParamFromBody :: (HasEnvironment m) => String -> m (Maybe String)
 getParamFromBody s = do e <- getEnvironment
                         ct <- getHeader HdrContentType
-                        let rm = rqMethod (fromJust $ getRequest e)
-                            rb = rqBody   (fromJust $ getRequest e)
+                        let rm = rqMethod (fromJust' "Params : getParamsFromBody" $ getRequest e)
+                            rb = rqBody   (fromJust' "Params : getParamsFromBody" $ getRequest e)
                         case rm of
                           POST -> -- TODO: ADD MULTIPART
                                   return $ lookup s $ formDecode rb

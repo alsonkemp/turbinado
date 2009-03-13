@@ -14,6 +14,7 @@ import Data.Dynamic
 
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Types
+import Turbinado.Utility.Data
 
 -- | Used during request initialization to add the 'ViewData' 'Map
 -- to the 'Environment'.
@@ -29,7 +30,7 @@ addViewDataToEnvironment  = do e <- getEnvironment
 -- then @getViewDataValue "number" :: 'Controller' Integer@ will return @'Controller' Nothing@.
 getViewDataValue :: (HasEnvironment m, Typeable a) => String -> m (Maybe a)
 getViewDataValue k = do e <- getEnvironment
-                        case (M.lookup k $ fromJust $ getViewData e) of
+                        case (M.lookup k $ fromJust' "ViewData : getViewDataValue" $ getViewData e) of
                           Nothing -> return $ Nothing
                           Just l  -> return $ fromDynamic l
 
@@ -51,6 +52,6 @@ getViewDataValue_u k = do v <- getViewDataValue k
 -- 'show' to convert to a String). 
 setViewDataValue :: (HasEnvironment m, Typeable a) => String -> a -> m ()
 setViewDataValue k v = do e <- getEnvironment
-                          let vd  = fromJust $ getViewData e
+                          let vd  = fromJust' "ViewData : setViewDataValue" $ getViewData e
                               vd' = M.insert k (toDyn v) vd
                           setEnvironment $ e {getViewData = Just vd'}

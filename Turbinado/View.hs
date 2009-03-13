@@ -11,6 +11,7 @@ module Turbinado.View (
         insertComponent,
 
         -- Module Exports
+        module Turbinado.View.Helpers,
         module Turbinado.View.HTML,
         module Turbinado.View.XML,
         module Turbinado.View.XML.PCDATA,
@@ -47,6 +48,7 @@ import Turbinado.Environment.Types
 import Turbinado.Environment.ViewData
 import Turbinado.Server.StandardResponse
 import Turbinado.View.Exception
+import Turbinado.View.Helpers
 import Turbinado.View.HTML
 import Turbinado.View.Monad hiding (liftIO)
 import Turbinado.View.XML hiding (Name)

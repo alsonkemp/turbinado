@@ -10,11 +10,12 @@ import Network.HTTP.Headers
 import Turbinado.Controller.Monad
 import Turbinado.Environment.Types
 import Turbinado.Environment.Request
+import Turbinado.Utility.Data
 
 -- | Attempts to pull a HTTP header value.
 getHeader :: (HasEnvironment m) => HeaderName -> m (Maybe String)
 getHeader h = do e <- getEnvironment
-                 return $ findHeader h (fromJust $ getRequest e)
+                 return $ findHeader h (fromJust' "Header: getHeader" $ getRequest e)
 
 -- | Unsafe version of getHeader.  Fails if the key is not found.
 getHeader_u :: (HasEnvironment m) => HeaderName -> m String

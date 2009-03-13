@@ -1,3 +1,4 @@
+
 module Turbinado.Database.ORM.Output where
 
 import qualified Data.Char
@@ -49,15 +50,15 @@ generateType t typeName pk ts cs =
   , ""
   , "import App.Models.Bases.Common"
   , "import Data.Maybe"
+  , "import Data.Time"
   , "import Data.Typeable"
-  , "import System.Time"
   , ""
   ] ++
   ["-- The data type for this model"] ++
   [ "data " ++ typeName ++ " = " ++ typeName ++ " {"
   ] ++
   [intercalate ",\n" (map columnToFieldLabel (M.toList cs))] ++
-  [ "    } deriving (Eq, Show, Typeable)"
+  [ "    } deriving (Show, Typeable)"
   , ""
   , "instance DatabaseModel " ++ typeName ++ " where"
   , "    tableName _ = \"" ++ t ++ "\""
@@ -83,7 +84,7 @@ generateFunctions t typeName pk ts cs =
   , "import App.Models.Bases.Common"
   , "import qualified Database.HDBC as HDBC"
   , "import Data.Maybe"
-  , "import System.Time"
+  , "import Data.Time"
   , ""
   , " -- My type"
   , "import App.Models.Bases." ++ typeName ++ "Type"
@@ -123,7 +124,7 @@ generateRelations t typeName pk ts cs =
   , "import App.Models.Bases.Common"
   , "import qualified Database.HDBC as HDBC"
   , "import Data.Maybe"
-  , "import System.Time"
+  , "import Data.Time"
   , ""
   , " -- Model imports"
   , "import App.Models.Bases." ++ typeName ++ "Type"
@@ -382,6 +383,7 @@ maybeColumnLabel :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> 
 maybeColumnLabel (_, (_, _, True)) = "Maybe "  -- Does the column have a default
 maybeColumnLabel (_, (desc, _, _)) = if ((colNullable desc) == Just True) then "Maybe " else ""
 
+-- Derived from hdbc-postgresql/Database/PostgreSQL/Statement.hs and hdbc/Database/HDBC/SqlValue.hs
 getHaskellTypeString :: SqlTypeId -> String
 getHaskellTypeString    SqlCharT = "String"
 getHaskellTypeString    SqlVarCharT = "String"
@@ -391,19 +393,25 @@ getHaskellTypeString    SqlWVarCharT = "String"
 getHaskellTypeString    SqlWLongVarCharT = "String"
 getHaskellTypeString    SqlDecimalT = "Rational"
 getHaskellTypeString    SqlNumericT = "Rational"
+getHaskellTypeString    SqlTinyIntT = "Int32"
 getHaskellTypeString    SqlSmallIntT ="Int32"
 getHaskellTypeString    SqlIntegerT = "Int32"
-getHaskellTypeString    SqlRealT = "Rational"
-getHaskellTypeString    SqlFloatT = "Float"
+getHaskellTypeString    SqlBigIntT = "Integer"
+getHaskellTypeString    SqlRealT = "Double"
+getHaskellTypeString    SqlFloatT = "Double"
 getHaskellTypeString    SqlDoubleT = "Double"
-getHaskellTypeString    SqlTinyIntT = "Int32"
-getHaskellTypeString    SqlBigIntT = "Int64"
-getHaskellTypeString    SqlDateT = "ClockTime"
-getHaskellTypeString    SqlTimeT = "ClockTime"
-getHaskellTypeString    SqlTimestampT = "ClockTime"
-getHaskellTypeString    SqlUTCDateTimeT = "ClockTime"
-getHaskellTypeString    SqlUTCTimeT = "TimeDiff"
-getHaskellTypeString    _ = error "Don't know how to translate this SqlTypeId to a SqlValue"
+getHaskellTypeString    SqlBitT = "Bool"
+getHaskellTypeString    SqlDateT = "Day"
+getHaskellTypeString    SqlTimestampWithZoneT = "ZonedTime"
+getHaskellTypeString    SqlTimestampT = "UTCTime"
+getHaskellTypeString    SqlUTCDateTimeT = "UTCTime"
+getHaskellTypeString    SqlTimeT = "TimeOfDay"
+getHaskellTypeString    SqlUTCTimeT = "TimeOfDay"
+getHaskellTypeString    SqlTimeWithZoneT = error "Turbinado ORM Generator: SqlTimeWithZoneT is not supported"
+getHaskellTypeString    SqlBinaryT = "B.ByteString"
+getHaskellTypeString    SqlVarBinaryT = "B.ByteString"
+getHaskellTypeString    SqlLongVarBinaryT = "B.ByteString"
+getHaskellTypeString    t = error "Turbinado ORM Generator: Don't know how to translate this SqlTypeId (" ++ show t ++ " to a Haskell Type"
 
 
 -- | Used for safety.  Lowercases the first letter to 

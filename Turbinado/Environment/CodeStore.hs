@@ -9,6 +9,8 @@ import Control.Monad ( when, foldM)
 import Data.Map hiding (map)
 import Data.List (isPrefixOf, intersperse)
 import Data.Maybe
+import Data.Time
+import Data.Time.Clock.POSIX
 import Data.Typeable
 import qualified Network.HTTP as HTTP
 import Prelude hiding (lookup,catch)
@@ -26,6 +28,7 @@ import Turbinado.Environment.Logger
 import Turbinado.Environment.Types
 import Turbinado.Environment.Request
 import Turbinado.Environment.Response
+import Turbinado.Utility.Data
 import Turbinado.View.Monad hiding (liftIO)
 import Turbinado.View.XML
 import Turbinado.Controller.Monad
@@ -33,7 +36,8 @@ import Turbinado.Controller.Monad
 -- | Create a new store for Code data
 addCodeStoreToEnvironment :: (HasEnvironment m) => m ()
 addCodeStoreToEnvironment = do e <- getEnvironment
-                               mv <- liftIO $ newMVar $ empty
+                               let cm = empty
+                               mv <- liftIO $ newMVar cm
                                setEnvironment $ e {getCodeStore = Just $ CodeStore mv}
 
 -- | This function attempts to pull a function from a pre-loaded cache or, if
@@ -41,10 +45,9 @@ addCodeStoreToEnvironment = do e <- getEnvironment
 retrieveCode :: (HasEnvironment m) => CodeType -> CodeLocation -> m CodeStatus
 retrieveCode ct cl' = do
     e <- getEnvironment
-    let (CodeStore mv) = fromJust $ getCodeStore e
+    let (CodeStore mv) = fromJust' "CodeStore: retrieveCode" $ getCodeStore e
         path  = getDir ct
-    cl <- do -- d <- getCurrentDirectory 
-          return (addExtension (joinPath $ map normalise [path, dropExtension $ fst cl']) "hs", snd cl')
+    cl <- return (addExtension (joinPath $ map normalise [path, dropExtension $ fst cl']) "hs", snd cl')
     debugM $ "  CodeStore : retrieveCode : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
     cmap <- liftIO $ takeMVar mv
     let c= lookup cl cmap
@@ -54,7 +57,7 @@ retrieveCode ct cl' = do
                Just (CodeLoadFailure _) -> do debugM ((fst cl) ++ " : " ++ (snd cl) ++ " : previous failure; try load") 
                                               loadCode ct cmap cl
                _                        -> do debugM ((fst cl) ++ " : " ++ (snd cl) ++ " : checking reload") 
-                                              checkReloadCode ct cmap (fromJust c) cl
+                                              checkReloadCode ct cmap (fromJust' "CodeStore: retrieveCode2" c) cl
     liftIO $ putMVar mv cmap'
     -- We _definitely_ have a code entry now, though it may have a MakeFailure
     let c' = lookup cl cmap'
@@ -92,8 +95,8 @@ checkReloadCode ct cmap cstat cl = do
         needReloadCode fp fd = do
             fe <- liftIO $ doesFileExist fp
             case fe of
-                True -> do mt <- liftIO $ getModificationTime fp    
-                           return $ (True, mt > fd)
+                True -> do TOD mt _ <- liftIO $ getModificationTime fp    
+                           return $ (True, fromIntegral mt > utcTimeToPOSIXSeconds fd)
                 False-> return (False, True)
 
         
@@ -152,7 +155,7 @@ _loadView ct cmap cl args fp = do
                                       return (insert cl (CodeLoadFailure $ unlines err) cmap)
                 LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
                                       liftIO $ unload m
-                                      t <- liftIO $ getClockTime
+                                      t <- liftIO $ getCurrentTime
                                       case ct of
                                         CTLayout              -> return (insert cl (CodeLoadView f t) cmap)
                                         CTView                -> return (insert cl (CodeLoadView f t) cmap)
@@ -170,7 +173,7 @@ _loadController ct cmap cl args fp = do
                                   return (insert cl (CodeLoadFailure $ unlines err) cmap)
             LoadSuccess m f -> do debugM ("LoadSuccess : " ++ fst cl )
                                   liftIO $ unload m
-                                  t <- liftIO $ getClockTime
+                                  t <- liftIO $ getCurrentTime
                                   case ct of
                                     CTController          -> return (insert cl (CodeLoadController f t) cmap)
                                     CTComponentController -> return (insert cl (CodeLoadComponentController f t) cmap)
@@ -197,9 +200,13 @@ customMergeToDir stb src dir = do
                 MergeFailure ["Source file does not exist : "++stb]
         _          -> do
                 src_str <- liftIO $ readFile src
-                stb_str <- liftIO $ readFile stb
-                let (stbimps, stbdecls) = span ( not . isPrefixOf "-- SPLIT HERE") $ lines stb_str
-                    mrg_str = outTitle ++ (unlines stbimps) ++ src_str ++ (unlines stbdecls)
+                stb_str  <- liftIO $ readFile stb
+                -- Check to see whether the file start with "module ".  If so, the user
+                -- should already have added the require preamble.  Otherwise, merge the stub.
+                let mrg_str = case src_str of
+                                ('m':'o':'d':'u':'l':'e':' ':_) -> src_str
+                                _ -> let (stbimps, stbdecls) = span ( not . isPrefixOf "-- SPLIT HERE") $ lines stb_str
+                                     in outTitle ++ (unlines stbimps) ++ src_str ++ (unlines stbdecls)
                 liftIO $ createDirectoryIfMissing True outDir
                 hdl <- liftIO $ openFile outFile WriteMode  -- overwrite!
                 liftIO $ hPutStr hdl mrg_str 

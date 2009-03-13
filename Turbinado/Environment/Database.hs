@@ -10,8 +10,7 @@ import Control.Monad
 import Control.Monad.State
 import Control.Monad.Trans
 import Data.Maybe
-import qualified Database.HDBC as HDBC
-import Database.HDBC (IConnection)
+import Database.HDBC
 
 import Config.Master
 import Turbinado.Controller.Monad
@@ -23,5 +22,5 @@ addDatabaseToEnvironment = do e <- getEnvironment
                               case databaseConnection of
                                 Nothing   -> return ()
                                 Just conn -> do c <- liftIO $ conn 
-                                                setEnvironment $ e {getDatabase = Just c}
+                                                setEnvironment $ e {getDatabase = Just (ConnWrapper c)}
 

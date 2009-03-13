@@ -18,6 +18,9 @@ import System.FilePath
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Types
 import Turbinado.Controller.Monad
+import Turbinado.Utility.Naming
+import Turbinado.Utility.Data
+import qualified Config.Master as Config
 
 -- | Used during request initialization to add the 'Settings' 'Map'
 -- to the 'Environment'.
@@ -37,7 +40,7 @@ addSettingsToEnvironment  = do e <- getEnvironment
 -- then @getSetting "number" :: 'Controller' Integer@ will return @'Controller' Nothing@.
 getSetting :: (HasEnvironment m, Typeable a) => String -> m (Maybe a)
 getSetting s = do e <- getEnvironment
-                  return $ maybe Nothing (fromDynamic) ( M.lookup s (fromJust $ getSettings e) )
+                  return $ maybe Nothing (fromDynamic) ( M.lookup s (fromJust' "Settings : getSetting" $ getSettings e) )
 
 -- | This function is an "unsafe" version of 'getSetting' in that this function assumes that the key
 -- *does* exist in the map.  If no key exists or if the value type does not match the inferred
@@ -57,13 +60,12 @@ getSetting_u s = do v <- getSetting s
 -- 'show' to convert to a String). 
 setSetting :: (HasEnvironment m, Typeable a) => String -> a -> m ()
 setSetting k v = do e <- getEnvironment
-                    debugM $ "  setSetting :   " ++ k
-                    setEnvironment $ e { getSettings = Just (M.insert k (toDyn v) (fromJust $ getSettings e))}
+                    setEnvironment $ e { getSettings = Just (M.insert k (toDyn v) (fromJust' "Settings : setSetting" $ getSettings e))}
 
 -- | Unsets a setting.  If the key does not exist, no error is thrown.
 unsetSetting :: (HasEnvironment m) => String -> m ()
 unsetSetting k = do e <- getEnvironment
-                    setEnvironment $ e { getSettings = Just (M.delete k (fromJust $ getSettings e))}
+                    setEnvironment $ e { getSettings = Just (M.delete k (fromJust' "Settings : unsetSetting" $ getSettings e))}
 
 -- ! The 'Settings' to use at the start of each request.
 defaultSettings :: [(String, Dynamic)]
@@ -76,8 +78,11 @@ defaultSettings = [ ("layout", toDyn "Default") ]
 getController :: (HasEnvironment m) => m (FilePath, String)
 getController = do c <- getSetting_u "controller"
                    a <- getSetting_u "action"
-                   return $ (c,
-                             actionName a)
+                   let converter = if Config.useLowerCasePaths
+                                        then fromUnderscore
+                                        else id
+                   return $ (converter c,
+                             actionName $ converter a)
                                where actionName s = (toLower $ head s) : (tail s)
 
 -- | Tells the 'Controller' to use a particular 'Layout' for the 'View'.
@@ -92,5 +97,8 @@ clearLayout = unsetSetting "layout"
 getView :: (HasEnvironment m) => m (FilePath, String)
 getView = do c <- getSetting_u "controller"
              a <- getSetting_u "action"
-             return (joinPath $ map normalise [c,a], "markup")
+             let converter = if Config.useLowerCasePaths
+                                  then fromUnderscore
+                                  else id
+             return (joinPath $ map normalise [converter c, converter a], "markup")
 

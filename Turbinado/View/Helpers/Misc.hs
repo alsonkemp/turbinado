@@ -8,9 +8,11 @@ import qualified Network.URI as URI
 import qualified Network.HTTP as HTTP
 import System.FilePath
 
-
-import Turbinado.View
-
+import Turbinado.Environment.Types
+import Turbinado.Environment.Request
+import Turbinado.View.Monad
+import Turbinado.View.XML
+import Turbinado.View.XMLGenerator
 
 breadCrumbs :: View XML
 breadCrumbs = do e <- getEnvironment

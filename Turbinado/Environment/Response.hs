@@ -16,6 +16,10 @@ import System.Time
 import System.Locale
 
 
+--getResponse :: (HasEnvironment m) => m HTTP.Response
+--getResponse  = do e <- getEnvironment
+--                  return $ getResponse e
+
 setResponse :: (HasEnvironment m) => HTTP.Response -> m ()
 setResponse resp = do e <- getEnvironment
                       setEnvironment $ e {getResponse = Just resp}

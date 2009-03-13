@@ -1,5 +1,5 @@
 Name:                turbinado
-Version:             0.4.9
+Version:             0.6.0
 Synopsis:            Haskell web application server
 Description:         The Haskell web application server
 License:             BSD3
@@ -14,6 +14,8 @@ Executable turbinado
   Main-is:             Turbinado/Server.hs
   Build-Depends:       base >= 4, 
                        containers, 
+                       Crypto > 4.1.0, 
+                       dataenc,
                        directory, 
                        harp == 0.4,
                        filepath,
@@ -32,7 +34,7 @@ Executable turbinado
                        pretty, 
                        regex-compat, 
                        time
-  ghc-options: -F -pgmFtrhsx -O
+  ghc-options: -F -pgmFtrhsx
   Extensions: MultiParamTypeClasses,
             FunctionalDependencies,
             TypeFamilies,
