@@ -1,5 +1,5 @@
 Name:                turbinado
-Version:             0.6.0
+Version:             0.7
 Synopsis:            Haskell web application server
 Description:         The Haskell web application server
 License:             BSD3
@@ -11,20 +11,18 @@ Build-Type:          Simple
 Cabal-Version:          >= 1.6
 
 Executable turbinado
-  Main-is:             Turbinado/Server.hs
+  Main-is:             Turbinado/Main.hs
   Build-Depends:       base >= 4, 
                        containers, 
                        Crypto > 4.1.0, 
                        dataenc,
                        directory, 
-                       harp == 0.4,
                        filepath,
-                       haskell-src-exts == 0.4.8,
                        HDBC >= 2, 
+                       HDBC-odbc >= 2,
                        HDBC-postgresql >= 2,
                        hslogger, 
-                       hsx == 0.4.8, 
-                       HTTP < 4000, 
+                       HTTP >= 4000, 
                        mtl, 
                        network, 
                        old-locale, 
@@ -33,8 +31,10 @@ Executable turbinado
                        parsec, 
                        pretty, 
                        regex-compat, 
-                       time
-  ghc-options: -F -pgmFtrhsx
+                       time,
+                       bytestring >= 0.9.1.4,
+                       mime >= 0.3.0,
+                       xhtml
   Extensions: MultiParamTypeClasses,
             FunctionalDependencies,
             TypeFamilies,
@@ -53,4 +53,91 @@ Executable turbinado
             ScopedTypeVariables,
             DeriveDataTypeable
 
+-- Creating a Library mostly in order to make documentation.  
+Library
+  Build-Depends:       base >= 4, 
+                       containers, 
+                       Crypto > 4.1.0, 
+                       dataenc,
+                       directory, 
+                       filepath,
+                       HDBC >= 2, 
+                       HDBC-postgresql >= 2,
+                       hslogger, 
+                       HTTP >= 4000, 
+                       mtl, 
+                       network, 
+                       old-locale, 
+                       old-time, 
+                       plugins >= 1.4,
+                       parsec, 
+                       pretty, 
+                       regex-compat, 
+                       time,
+                       bytestring >= 0.9.1.4,
+                       mime >= 0.3.0
+  Extensions: MultiParamTypeClasses,
+            FunctionalDependencies,
+            TypeFamilies,
+            RankNTypes,
+            PolymorphicComponents,
+            ExistentialQuantification,
+            FlexibleContexts,
+            FlexibleInstances,
+            EmptyDataDecls,
+            CPP,
+            TypeSynonymInstances,
+            OverlappingInstances,
+            UndecidableInstances,
+            PatternGuards,
+            MultiParamTypeClasses,
+            ScopedTypeVariables,
+            DeriveDataTypeable
+  Exposed-Modules: Turbinado.Controller
+                 Turbinado.Controller.Exception
+                 Turbinado.Controller.Monad
+                 Turbinado.Controller.Routes
+                 Turbinado.Database.ORM.Common
+                 Turbinado.Database.ORM.Generator
+                 Turbinado.Database.ORM.Types
+                 Turbinado.Database.ORM.Adapters.Common
+                 Turbinado.Database.ORM.Adapters.PostgreSQL
+                 Turbinado.Database.ORM.Adapters.MySQL
+                 Turbinado.Database.ORM.Adapters.Types
+                 Turbinado.Environment.CodeStore
+                 Turbinado.Environment.Cookie
+                 Turbinado.Environment.Database
+                 Turbinado.Environment.Files
+                 Turbinado.Environment.Header
+                 Turbinado.Environment.Logger
+                 Turbinado.Environment.MimeTypes
+                 Turbinado.Environment.Params
+                 Turbinado.Environment.Request
+                 Turbinado.Environment.Response
+                 Turbinado.Environment.Routes
+                 Turbinado.Environment.Session.CookieSession
+                 Turbinado.Environment.Settings
+                 Turbinado.Environment.Types
+                 Turbinado.Environment.ViewData
+                 Turbinado.Layout
+                 Turbinado.Layout.Helpers
+                 Turbinado.Layout.Helpers.Misc
+                 Turbinado.Layout.Helpers.Tags
+                 Turbinado.Server
+                 Turbinado.Server.ErrorHandler
+                 Turbinado.Server.Exception
+                 Turbinado.Server.Network
+                 Turbinado.Server.RequestProcess
+                 Turbinado.Server.StandardResponse
+                 Turbinado.Server.StaticContent
+                 Turbinado.Utility.Data
+                 Turbinado.Utility.General
+                 Turbinado.Utility.Naming
+                 Turbinado.View
+                 Turbinado.View.Exception
+                 Turbinado.View.HTML
+                 Turbinado.View.Helpers
+                 Turbinado.View.Helpers.Misc
+                 Turbinado.View.Helpers.Tags
+                 Turbinado.View.Monad
 

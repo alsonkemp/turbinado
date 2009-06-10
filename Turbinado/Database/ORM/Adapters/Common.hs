@@ -1,5 +1,4 @@
-
-module Turbinado.Database.ORM.Output where
+module Turbinado.Database.ORM.Adapters.Common where
 
 import qualified Data.Char
 import Control.Monad
@@ -11,22 +10,9 @@ import Database.HDBC
 import System.Directory
 import System.FilePath
 
+import Turbinado.Database.ORM.Common
 import Turbinado.Database.ORM.Types
 
-type TypeName = String
-
--- TODO: This file needs to be completely torn up and generalized.
-
-writeModels ts = 
-  do writeFile "App/Models/Bases/Common.hs" generateCommon
-     mapM_ (\(t, (cs, pk)) -> 
-                 let typeName = (toType t) in
-                 do e <- doesFileExist (joinPath ["App/Models", typeName ++ ".hs"])
-                    when (not e) (writeFile (joinPath ["App/Models", typeName++".hs"]) (generateModelFile typeName) ) 
-                    writeFile (joinPath ["App/Models/Bases", typeName ++ "Type.hs"]) (generateType t typeName pk ts cs)
-                    writeFile (joinPath ["App/Models/Bases", typeName ++ "Functions.hs"]) (generateFunctions t typeName pk ts cs)
-                    writeFile (joinPath ["App/Models/Bases", typeName ++ "Relations.hs"]) (generateRelations t typeName pk ts cs)
-           ) $ M.toList ts
 
 ---------------------------------------------------------------------------
 --  File templates                                                       --
@@ -100,10 +86,11 @@ generateFunctions t typeName pk ts cs =
   ++
   [""
   ,"deleteWhere :: (HasEnvironment m) => SelectString -> SelectParams -> m Integer"
-  ,"deleteWhere ss sp = do"
+  ,"deleteWhere ss sp = do "
   ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-  ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\"DELETE FROM " ++ t++ " WHERE (\" ++ ss ++ \") \")  sp"
-  ,"        return res"
+  ,"        catchDBErrors conn $ do"
+  ,"          res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\"DELETE FROM \\\"" ++ t ++ "\\\" WHERE (\" ++ ss ++ \") \")  sp"
+  ,"          return res"
   ]
 generateRelations ::  TableName ->
                       TypeName ->
@@ -199,6 +186,12 @@ generateCommon = unlines $
   ,"type SelectParams = [SqlValue]"
   ,"type OrderByParams  = String"
   ,""
+  ,"-- Exception handling"
+  ,""
+  ,"catchDBErrors :: (HasEnvironment m) => ConnWrapper -> IO a -> m a"
+  ,"catchDBErrors c fdb = liftIO $ catchSql fdb (\\e-> (handleSqlError $ rollback c) >>"
+  ,"                                                   (throwDyn $ e))"
+  ,""
   ,"class (DatabaseModel model) =>"
   ,"        IsModel model where"
   ,"        insert    :: (HasEnvironment m) => model -> Bool -> m (Maybe Integer)"
@@ -227,46 +220,47 @@ generateIsModel t cs typeName =
     ["instance IsModel " ++ typeName ++ " where"
     ,"    insert m returnId = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res  <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\" INSERT INTO " ++ t ++ " (" ++ (intercalate "," $ M.keys cs) ++") VALUES (" ++ (intercalate "," $ map generateQs (M.assocs cs) ) ++ ")\")  ( " ++ (intercalate " ++ " $ filter (not . null) $ map generateArgs (M.assocs cs) ) ++ ")"
-    ,"        case res of"
-    ,"          0 -> (liftIO $ HDBC.handleSqlError $ HDBC.rollback conn) >>"
-    ,"               (throwDyn $ HDBC.SqlError"
-    ,"                           {HDBC.seState = \"\","
-    ,"                            HDBC.seNativeError = (-1),"
-    ,"                            HDBC.seErrorMsg = \"Rolling back.  No record inserted :" ++ t ++ " : \" ++ (show m)"
-    ,"                           })"
-    ,"          1 -> liftIO $ HDBC.handleSqlError $ HDBC.commit conn >>"
-    ,"               if returnId"
-    ,"                 then do i <- liftIO $ HDBC.catchSql (HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Integer)]]) ) "
-    ,"                         return $ HDBC.fromSql $ head $ head i"
-    ,"               else return Nothing"
+    ,"        catchDBErrors conn $ do"
+    ,"          res  <- HDBC.run conn (\" INSERT INTO \\\"" ++ t ++ "\\\" (" ++ (cols cs) ++") VALUES (" ++ (intercalate "," $ map generateQs (M.assocs cs) ) ++ ")\")  ( " ++ (intercalate " ++ " $ filter (not . null) $ map generateArgs (M.assocs cs) ) ++ ")"
+    ,"          case res of"
+    ,"            0 -> (HDBC.handleSqlError $ HDBC.rollback conn) >>"
+    ,"                 (throwDyn $ HDBC.SqlError"
+    ,"                             {HDBC.seState = \"\","
+    ,"                              HDBC.seNativeError = (-1),"
+    ,"                              HDBC.seErrorMsg = \"Rolling back.  No record inserted :" ++ t ++ " : \" ++ (show m)"
+    ,"                             })"
+    ,"            1 -> HDBC.handleSqlError $ HDBC.commit conn >>"
+    ,"                 if returnId"
+    ,"                   then do i <- HDBC.catchSql (HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT lastval()\" []) (\\_ -> HDBC.commit conn >> (return $ [[HDBC.toSql (0 :: Integer)]]) ) "
+    ,"                           return $ HDBC.fromSql $ head $ head i"
+    ,"                 else return Nothing"
     ,"    findAll = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT " ++ cols cs ++ " FROM " ++ t ++ "\" []"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn \"SELECT " ++ cols cs ++ " FROM \\\"" ++ t ++ "\\\" \" []"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findAllWhere ss sp = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") \")  sp"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t++ "\\\" WHERE (\" ++ ss ++ \") \")  sp"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findAllOrderBy op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY \" ++ op) []"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t++ "\\\" ORDER BY \" ++ op) []"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findAllWhereOrderBy ss sp op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY \" ++ op) sp"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t++ "\\\" WHERE (\" ++ ss ++ \") ORDER BY \" ++ op) sp"
     ,"        return $ map (\\r -> " ++ generateConstructor cs typeName ++ ") res"
     ,"    findOneWhere ss sp = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") LIMIT 1\") sp"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t++ "\\\" WHERE (\" ++ ss ++ \") LIMIT 1\") sp"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
     ,"    findOneOrderBy op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " ORDER BY \" ++ op ++ \" LIMIT 1\")  []"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t++ "\\\" ORDER BY \" ++ op ++ \" LIMIT 1\")  []"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
     ,"    findOneWhereOrderBy ss sp op = do"
     ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t++ " WHERE (\" ++ ss ++ \") ORDER BY \" ++ op ++\" LIMIT 1\")  sp"
+    ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t++ "\\\" WHERE (\" ++ ss ++ \") ORDER BY \" ++ op ++\" LIMIT 1\")  sp"
     ,"        return $ (\\r -> " ++ generateConstructor cs typeName ++ ") (head res)"
      ]
        where generateQs   :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
@@ -283,7 +277,7 @@ generateHasFindByPrimaryKey t cs typeName pk =
     _ -> ["instance HasFindByPrimaryKey " ++ typeName ++ " " ++ " (" ++ unwords (intersperse "," (map (\c -> getHaskellTypeString $ colType $ (\(c',_,_) -> c') $ fromJust $ M.lookup c cs) pk)) ++ ") " ++ " where"
          ,"    find pk@(" ++ (concat $ intersperse ", " $ map (\i -> "pk"++(show i)) [1..(length pk)]) ++ ") = do"
          ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM " ++ t ++ " WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
+         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.quickQuery' conn (\"SELECT " ++ cols cs ++ " FROM \\\"" ++ t ++ "\\\" WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
          ,"        case res of"
          ,"          [] -> throwDyn $ HDBC.SqlError"
          ,"                           {HDBC.seState = \"\","
@@ -299,28 +293,30 @@ generateHasFindByPrimaryKey t cs typeName pk =
          ,""
          ,"    delete pk@(" ++ (concat $ intersperse ", " $ map (\i -> "pk"++(show i)) [1..(length pk)]) ++ ") = do"
          ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn (\"DELETE FROM " ++ t ++ " WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
-         ,"        case res of"
-         ,"          0 -> (liftIO $ HDBC.handleSqlError $ HDBC.rollback conn) >>"
-         ,"               (throwDyn $ HDBC.SqlError"
-         ,"                           {HDBC.seState = \"\","
-         ,"                            HDBC.seNativeError = (-1),"
-         ,"                            HDBC.seErrorMsg = \"Rolling back.  No record found when deleting by Primary Key:" ++ t ++ " : \" ++ (show pk)"
-         ,"                           })"
-         ,"          1 -> (liftIO $ HDBC.handleSqlError $ HDBC.commit conn) >> return ()"
-         ,"          _ -> (liftIO $ HDBC.handleSqlError $ HDBC.rollback conn) >>"
-         ,"               (throwDyn $ HDBC.SqlError"
-         ,"                           {HDBC.seState = \"\","
-         ,"                            HDBC.seNativeError = (-1),"
-         ,"                            HDBC.seErrorMsg = \"Rolling back.  Too many records deleted when deleting by Primary Key:" ++ t ++ " : \" ++ (show pk)"
-         ,"                           })"
+         ,"        catchDBErrors conn $ do"
+         ,"          res <- HDBC.run conn (\"DELETE FROM \\\"" ++ t ++ "\\\" WHERE (" ++ (generatePrimaryKeyWhere pk) ++ ")\") [" ++ (unwords $ intersperse "," $ map (\(c,i) -> "HDBC.toSql pk" ++ (show i)) (zip pk [1..])) ++ "]"
+         ,"          case res of"
+         ,"            0 -> (HDBC.handleSqlError $ HDBC.rollback conn) >>"
+         ,"                 (throwDyn $ HDBC.SqlError"
+         ,"                             {HDBC.seState = \"\","
+         ,"                              HDBC.seNativeError = (-1),"
+         ,"                              HDBC.seErrorMsg = \"Rolling back.  No record found when deleting by Primary Key:" ++ t ++ " : \" ++ (show pk)"
+         ,"                             })"
+         ,"            1 -> (HDBC.handleSqlError $ HDBC.commit conn) >> return ()"
+         ,"            _ -> (HDBC.handleSqlError $ HDBC.rollback conn) >>"
+         ,"                 (throwDyn $ HDBC.SqlError"
+         ,"                             {HDBC.seState = \"\","
+         ,"                              HDBC.seNativeError = (-1),"
+         ,"                              HDBC.seErrorMsg = \"Rolling back.  Too many records deleted when deleting by Primary Key:" ++ t ++ " : \" ++ (show pk)"
+         ,"                             })"
          ,""
          ,"    update m = do"
          ,"        conn <- getEnvironment >>= (return . fromJust . getDatabase )"
-         ,"        res <- liftIO $ HDBC.handleSqlError $ HDBC.run conn \"UPDATE " ++ t ++ " SET (" ++ (unwords $ intersperse "," $ M.keys cs) ++ ") = (" ++ (intercalate "," $ (take (M.size cs) (repeat "?"))) ++ ") WHERE (" ++ (generatePrimaryKeyWhere pk)  ++")\""
-         ,"                  [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ toFunction c ++ " m") (M.keys cs) ) ++ ", " ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ toFunction c ++ " m") pk ) ++ "]"
-         ,"        liftIO $ HDBC.handleSqlError $ HDBC.commit conn"
-         ,"        return ()"
+         ,"        catchDBErrors conn $ do"
+         ,"          res <- HDBC.run conn \"UPDATE \\\"" ++ t ++ "\\\" SET (" ++ (cols cs) ++ ") = (" ++ (intercalate "," $ (take (M.size cs) (repeat "?"))) ++ ") WHERE (" ++ (generatePrimaryKeyWhere pk)  ++")\""
+         ,"                    [" ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ toFunction c ++ " m") (M.keys cs) ) ++ ", " ++ (unwords $ intersperse "," $ map (\c -> "HDBC.toSql $ " ++ toFunction c ++ " m") pk ) ++ "]"
+         ,"          HDBC.handleSqlError $ HDBC.commit conn"
+         ,"          return ()"
          ]
 
 generateHasChildren :: TableName -> Columns -> TypeName -> [String]
@@ -356,71 +352,13 @@ generateHasParent_t ptn pcn ctn ccn =
 
 {-----------------------------------------------------------------------}
 
-
-generatePrimaryKeyWhere pk = 
+generatePrimaryKeyWhere pk =
   unwords $
-    intersperse "++ \" AND \" ++ \"" $
-      map (\(c,i) -> c ++ " = ? ") (zip pk [1..])
+    intersperse " AND " $
+      map (\(c,i) -> "\\\"" ++ c ++ "\\\" = ? ") (zip pk [1..])
+
 
 generateConstructor cs typeName =
   typeName ++ " " ++ (unwords $
   map (\i -> "(HDBC.fromSql (r !! " ++ (show i) ++ "))") [0..((M.size cs) - 1)])
 
- 
----------------------------------------------------------------------------
---  Utility functions                                                    --
----------------------------------------------------------------------------
-cols :: Columns -> String
-cols cs = unwords $  intersperse "," $ M.keys cs
-
-columnToFieldLabel :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
-columnToFieldLabel cd@(name, (desc, _, _)) =
-  "    " ++ toFunction name  ++ " :: " ++ 
-  maybeColumnLabel cd ++
-  getHaskellTypeString (colType desc)
-
-maybeColumnLabel :: (String, (SqlColDesc, ForeignKeyReferences, HasDefault)) -> String
-maybeColumnLabel (_, (_, _, True)) = "Maybe "  -- Does the column have a default
-maybeColumnLabel (_, (desc, _, _)) = if ((colNullable desc) == Just True) then "Maybe " else ""
-
--- Derived from hdbc-postgresql/Database/PostgreSQL/Statement.hs and hdbc/Database/HDBC/SqlValue.hs
-getHaskellTypeString :: SqlTypeId -> String
-getHaskellTypeString    SqlCharT = "String"
-getHaskellTypeString    SqlVarCharT = "String"
-getHaskellTypeString    SqlLongVarCharT = "String"
-getHaskellTypeString    SqlWCharT = "String"
-getHaskellTypeString    SqlWVarCharT = "String"
-getHaskellTypeString    SqlWLongVarCharT = "String"
-getHaskellTypeString    SqlDecimalT = "Rational"
-getHaskellTypeString    SqlNumericT = "Rational"
-getHaskellTypeString    SqlTinyIntT = "Int32"
-getHaskellTypeString    SqlSmallIntT ="Int32"
-getHaskellTypeString    SqlIntegerT = "Int32"
-getHaskellTypeString    SqlBigIntT = "Integer"
-getHaskellTypeString    SqlRealT = "Double"
-getHaskellTypeString    SqlFloatT = "Double"
-getHaskellTypeString    SqlDoubleT = "Double"
-getHaskellTypeString    SqlBitT = "Bool"
-getHaskellTypeString    SqlDateT = "Day"
-getHaskellTypeString    SqlTimestampWithZoneT = "ZonedTime"
-getHaskellTypeString    SqlTimestampT = "UTCTime"
-getHaskellTypeString    SqlUTCDateTimeT = "UTCTime"
-getHaskellTypeString    SqlTimeT = "TimeOfDay"
-getHaskellTypeString    SqlUTCTimeT = "TimeOfDay"
-getHaskellTypeString    SqlTimeWithZoneT = error "Turbinado ORM Generator: SqlTimeWithZoneT is not supported"
-getHaskellTypeString    SqlBinaryT = "B.ByteString"
-getHaskellTypeString    SqlVarBinaryT = "B.ByteString"
-getHaskellTypeString    SqlLongVarBinaryT = "B.ByteString"
-getHaskellTypeString    t = error "Turbinado ORM Generator: Don't know how to translate this SqlTypeId (" ++ show t ++ " to a Haskell Type"
-
-
--- | Used for safety.  Lowercases the first letter to 
--- make a valid function.
-toFunction [] = error "toFunction passed an empty string"
-toFunction (firstLetter:letters) = (Data.Char.toLower firstLetter) : letters
-
-
--- | Used for safety.  Uppercases the first letter to 
--- make a valid type.
-toType [] = error "toType passed an empty string"
-toType (firstLetter:letters) = (Data.Char.toUpper firstLetter) : letters

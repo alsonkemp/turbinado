@@ -14,7 +14,8 @@ module Turbinado.Server.StandardResponse where
 
 import Data.List
 import Data.Maybe
-import Network.HTTP
+import Network.HTTP (Response(..), rspHeaders)
+import Network.HTTP.Stream
 import Network.HTTP.Headers
 import System.Locale
 import System.Time

@@ -5,7 +5,9 @@ module Turbinado.Server.Network (
 
 import Data.Maybe
 import Network.Socket
-import Network.HTTP
+import Network.HTTP hiding (receiveHTTP, respondHTTP)
+import Network.HTTP.Stream
+import Network.StreamSocket
 import Network.URI
 import qualified System.Environment as Env
 import System.IO
@@ -30,13 +32,14 @@ receiveRequest (Just sock) = do
         case req of
          Left e -> throwTurbinado $ BadRequest $ "In receiveRequest : " ++ show e
          Right r  -> do e <- get
-                        put $ e {getRequest = Just r}
+                        put $ e {Turbinado.Environment.Types.getRequest = Just r}
 
 -- | Get the 'Response' from the 'Environment' and send
 -- it back to the client.
 sendResponse :: Maybe Socket -> Environment -> IO ()
-sendResponse Nothing e = respondCGI $ fromJust' "Network : sendResponse" $ getResponse e
-sendResponse (Just sock) e = respondHTTP sock $ fromJust' "Network : sendResponse" $ getResponse e
+sendResponse Nothing e = respondCGI $ fromJust' "Network : sendResponse" $ Turbinado.Environment.Types.getResponse e
+sendResponse (Just sock) e = do
+  respondHTTP sock $ fromJust' "Network : sendResponse" $ Turbinado.Environment.Types.getResponse e
 
 -- | Pull a CGI request from stdin
 acceptCGI :: Controller ()
@@ -51,7 +54,8 @@ acceptCGI = do body <- liftIO $ hGetContents stdin
                 Left err -> errorResponse $ show err
                 Right r  -> do e' <- getEnvironment
                                setEnvironment $ e' {
-                                getRequest = Just Request { rqURI = rquri
+                                Turbinado.Environment.Types.getRequest = 
+                                             Just Request { rqURI = rquri
                                                           , rqMethod = rqmethod
                                                           , rqHeaders = r
                                                           , rqBody = body
@@ -68,7 +72,7 @@ matchRqMethod m = fromJust' "Turbinado.Server.Network:matchRqMethod" $
                              ]
 
 -- | Convert the HTTP.Response to a CGI response for stdout.
-respondCGI :: Response -> IO ()
+respondCGI :: Response String -> IO ()
 respondCGI r = do let message = (unlines $ drop 1 $ lines $ show r) ++ "\n\n" ++ rspBody r   -- need to drop the first line from the response for CGI
                   hPutStr stdout message
                   hFlush stdout

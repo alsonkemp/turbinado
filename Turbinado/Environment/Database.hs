@@ -1,6 +1,5 @@
 module Turbinado.Environment.Database (
-        addDatabaseToEnvironment,
-        Connection
+        addDatabaseToEnvironment
         ) where
 
 import Data.Typeable
@@ -21,6 +20,6 @@ addDatabaseToEnvironment :: (HasEnvironment m) => m ()
 addDatabaseToEnvironment = do e <- getEnvironment
                               case databaseConnection of
                                 Nothing   -> return ()
-                                Just conn -> do c <- liftIO $ conn 
+                                Just conn -> do c <- liftIO  conn
                                                 setEnvironment $ e {getDatabase = Just (ConnWrapper c)}
 

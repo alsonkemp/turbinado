@@ -2,20 +2,18 @@ module Turbinado.View (
         evalView,
         defaultContentType,
         -- limited export from Turbinado.View.Monad
-        View, ViewT, ViewT',
-        runView, runViewT,
+        View,
+        runView,
         -- * Functions
         liftIO, catch,
         insertView,
         insertDefaultView,
         insertComponent,
+        prettyHtml,
 
         -- Module Exports
         module Turbinado.View.Helpers,
         module Turbinado.View.HTML,
-        module Turbinado.View.XML,
-        module Turbinado.View.XML.PCDATA,
-        module Turbinado.View.XMLGenerator,
         module Turbinado.Environment.CodeStore,
         module Turbinado.Environment.Params,
         module Turbinado.Environment.Request,
@@ -36,6 +34,7 @@ import qualified Network.HTTP as HTTP
 import qualified Network.URI  as URI
 import Prelude hiding (catch)
 import System.FilePath
+import Text.XHtml.Strict
 
 import Turbinado.Controller.Monad hiding (catch)
 import Turbinado.Environment.CodeStore
@@ -51,20 +50,19 @@ import Turbinado.View.Exception
 import Turbinado.View.Helpers
 import Turbinado.View.HTML
 import Turbinado.View.Monad hiding (liftIO)
-import Turbinado.View.XML hiding (Name)
-import Turbinado.View.XML.PCDATA
-import Turbinado.View.XMLGenerator
-import Turbinado.Utility.General
+import Turbinado.Utility.Data
+import Turbinado.Utility.Naming
+import qualified Config.Master as Config
 
-evalView :: (HasEnvironment m) => View XML -> m ()
+evalView :: (HasEnvironment m) => VHtml -> m ()
 evalView p = do e <- getEnvironment
                 (x, e') <- liftIO $ runView p e
-                pageResponse [] $ renderAsHTML x
+                pageResponse [] $ prettyHtml x
 
 defaultContentType :: String
 defaultContentType = "text/html; charset=ISO-8859-1"
 
-insertDefaultView :: View XML
+insertDefaultView :: VHtml
 insertDefaultView = 
              do cl <- getView
                 debugM $ "    Layout: insertDefaultView : loading   " ++ (fst cl) ++ " - " ++ (snd cl)
@@ -72,45 +70,49 @@ insertDefaultView =
                 case c of
                   CodeLoadView       v _ -> v 
                   CodeLoadController _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                  CodeLoadFailure    e     -> return $ cdata e
+                  CodeLoadFailure    e     -> stringToVHtml e
 
-insertView :: String -> String -> View XML
+insertView :: String -> String -> VHtml
 insertView c a = 
              do debugM $ "    Layout: insertView : loading   " ++ c ++ " - " ++ a
-                c <- retrieveCode CTView (c, (toLower (head a)):(tail a))
+                let converter = if Config.useLowerCasePaths
+                                    then fromUnderscore
+                                    else id
+                    filename  = joinPath $ map normalise [converter c, converter a]
+                c <- retrieveCode CTView (filename, "markup")
                 case c of
                   CodeLoadView       v _ -> v 
                   CodeLoadController _ _ -> error "retrieveAndRunLayout called, but returned CodeLoadController"
-                  CodeLoadFailure    e     -> return $ cdata e
+                  CodeLoadFailure    e     -> stringToVHtml e
  
-insertComponent :: String -> String -> [(String, String)] -> View XML
+insertComponent :: String -> String -> [(String, String)] -> VHtml
 insertComponent controller action opts =
            do debugM $ " insertComponent: Starting"
               p <- retrieveCode CTComponentController (joinPath [controller,"Controller"],  (toLower $ head action) : (tail action))
               case p of
-                 CodeLoadMissing                    ->    return $ cdata $ "insertComponent error: code missing : " ++ controller ++ " - " ++ action
-                 CodeLoadFailure e                  ->    return $ cdata $ "insertComponent error: " ++ e
+                 CodeLoadMissing                    ->    stringToVHtml $ "insertComponent error: code missing : " ++ controller ++ " - " ++ action
+                 CodeLoadFailure e                  ->    stringToVHtml $ "insertComponent error: " ++ e
                  CodeLoadComponentController p'   _ -> do oldE <- getEnvironment
                                                           mapM_ (\(k, v) -> setSetting k v) opts
-                                                          lift $ p'
+                                                          p'
                                                           -- allow for overloading of the Component Controller and View
                                                           c <- getSetting "component-controller"
                                                           a <- getSetting "component-view"
                                                           insertComponentView oldE (fromMaybe controller c) (fromMaybe action a)
-                 _                                  ->    return $ cdata $ "insertComponent error: received incorrect CodeStatus"
+                 _                                  ->    stringToVHtml $ "insertComponent error: received incorrect CodeStatus"
 
-insertComponentView :: Environment -> String -> String -> View XML
+insertComponentView :: Environment -> String -> String -> VHtml
 insertComponentView oldE controller action =
            do debugM $ " insertComponentView: Starting"
               v  <- retrieveCode CTComponentView (joinPath [controller, "Views", action], "markup")
               case v of
                  CodeLoadMissing                    -> do setEnvironment oldE
-                                                          return $ cdata $ "insertComponentView error: code missing : " ++ (joinPath [controller, action]) ++ " - markup"
+                                                          stringToVHtml $ "insertComponentView error: code missing : " ++ (joinPath [controller, action]) ++ " - markup"
                  CodeLoadFailure e                  -> do setEnvironment oldE
-                                                          return $ cdata $ "insertComponentView error: " ++ e
+                                                          stringToVHtml $ "insertComponentView error: " ++ e
                  CodeLoadComponentView v' _   -> do res <- v'
                                                     setEnvironment oldE
                                                     return res
                  _                            -> do setEnvironment oldE
-                                                    return $ cdata $ "insertComponentView error"
+                                                    stringToVHtml $ "insertComponentView error"
 

@@ -5,6 +5,7 @@ module Turbinado.Environment.Settings (
         setSetting,
         getController,
         clearLayout,
+        setLayout,
         getView
         )where
 

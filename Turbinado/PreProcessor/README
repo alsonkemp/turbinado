@@ -1,0 +1,5 @@
+Turbinado is a Rails-ish MVC web framework for Haskell.  
+See the homepage @ http://www.turbinado.org
+
+This is the preprocessor that converts HTML-ish and
+and HAML-ish markup into valid Turbinado.View.HTML.

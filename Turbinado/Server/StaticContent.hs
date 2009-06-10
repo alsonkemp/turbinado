@@ -27,7 +27,7 @@ tryStaticContent =
   do e <- get
      cDir <- liftIO $ getCurrentDirectory
      let mt      = fromJust $ getMimeTypes e
-         rq      = fromJust $ getRequest e
+         rq      = fromJust $ Turbinado.Environment.Types.getRequest e
          f       = drop 1 $ uriPath $ rqURI rq
          trydirs = case (length f) of
            0 -> map (\s -> joinPath $ map normalise [cDir, s, "index.html"]) staticDirs

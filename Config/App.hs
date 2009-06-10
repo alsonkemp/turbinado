@@ -1,6 +1,5 @@
 module Config.App (
   useLowerCasePaths,
-  Connection,
   customSetupFilters,
   customPreFilters,
   customPostFilters,

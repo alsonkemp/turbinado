@@ -20,7 +20,7 @@ import System.Locale
 --getResponse  = do e <- getEnvironment
 --                  return $ getResponse e
 
-setResponse :: (HasEnvironment m) => HTTP.Response -> m ()
+setResponse :: (HasEnvironment m) => HTTP.Response String -> m ()
 setResponse resp = do e <- getEnvironment
                       setEnvironment $ e {getResponse = Just resp}
 

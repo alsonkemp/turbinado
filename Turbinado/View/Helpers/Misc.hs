@@ -11,11 +11,10 @@ import System.FilePath
 import Turbinado.Environment.Types
 import Turbinado.Environment.Request
 import Turbinado.View.Monad
-import Turbinado.View.XML
-import Turbinado.View.XMLGenerator
+import Turbinado.View.HTML
 
-breadCrumbs :: View XML
+breadCrumbs :: VHtml
 breadCrumbs = do e <- getEnvironment
                  let r  = fromJust $ getRequest e
                      ps = tail $ splitDirectories $ URI.uriPath $ rqURI r
-                 return $ cdata $"<div class='breadcrumbs'>" ++ (concat $ intersperse " : " ps) ++ "</div>" 
+                 (tag "div"![strAttr "class" "breadcrumbs"]) << (stringToVHtml $ concat $ intersperse " : " ps)

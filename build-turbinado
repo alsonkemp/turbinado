@@ -1,0 +1,25 @@
+#!/bin/sh
+
+echo "Building trturbinado"
+cd Turbinado/PreProcessor
+echo "  configuring..."
+runghc Setup.lhs configure
+echo "  building..."
+runghc Setup.lhs build
+echo "  copying to ~/bin..."
+cp dist/build/trturbinado/trturbinado ~/bin
+echo ""
+echo "-------------"
+echo ""
+
+cd ../..
+echo "Building turbinado"
+echo "  configuring..."
+runghc Setup.lhs configure
+echo "  building..."
+runghc Setup.lhs build
+echo "  building documentation..."
+runghc Setup.lhs haddock --hscolour-css=static/css/hscolour.css --hyperlink-source
+
+echo "Finished"
+

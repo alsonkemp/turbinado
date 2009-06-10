@@ -4,7 +4,8 @@ module Turbinado.Layout.Helpers.Tags (
 
 import Turbinado.View
 
-styleSheetTag :: String -> String -> View XML
-styleSheetTag s m = return $ cdata $ "<link media=\"" ++ m ++"\" type=\"text/css\" rel=\"stylesheet\" href=\"/css/" ++ s ++".css\">"
+styleSheetTag :: String -> String -> VHtml
+styleSheetTag s m =
+    itag "link" ! [strAttr "media" m, strAttr "type" "text/css", strAttr "rel" "stylesheet", strAttr "href" ("/css/" ++ s ++".css")]
 
 

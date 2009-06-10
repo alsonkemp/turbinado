@@ -89,7 +89,7 @@ splitOn c l = reverse $ worker c l []
 -- Handle static routes
 ----------------------------------------------------------------------------
 
---addStaticViews :: [(String, String, View XML)] -> CodeMap -> CodeMap
+--addStaticViews :: [(String, String, View VHtml)] -> CodeMap -> CodeMap
 addStaticViews [] cm = cm
 addStaticViews ((p,f,v):vs) cm = let cm' = M.insert (p,f) (CodeLoadView v $ UTCTime (ModifiedJulianDay 1000000) (secondsToDiffTime 0)) cm in
                                  addStaticViews vs cm'

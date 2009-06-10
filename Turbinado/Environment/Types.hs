@@ -8,13 +8,12 @@ import System.IO
 import System.IO.Unsafe
 import System.Log.Logger
 import Text.Regex
+import Text.XHtml.Strict
 import Control.Concurrent.MVar
 import Control.Monad.State
 import qualified Network.HTTP as HTTP
-import HSX.XMLGenerator (XMLGenT(..), unXMLGenT)
-import Turbinado.View.XML
 import Database.HDBC
-
+import Codec.MIME.Type (MIMEValue)
 
 -- | The class of types which hold an 'Environment'.
 -- 'View' and 'Controller' are both instances of this class.
@@ -22,15 +21,21 @@ class (MonadIO m) => HasEnvironment m where
   getEnvironment :: m Environment
   setEnvironment :: Environment -> m ()
 
+instance HasEnvironment (StateT Environment IO) where
+  getEnvironment = get
+  setEnvironment = put
+
 -- | The Environment in which each request is handled.
 -- All components are held within 'Maybe's so that the
 -- Environment can be partially constructed.
 data Environment =  Environment { getCodeStore      :: Maybe CodeStore
                                 , getDatabase       :: Maybe ConnWrapper
+                                , getFiles          :: Maybe Files
                                 , getLoggerLock     :: Maybe LoggerLock
                                 , getMimeTypes      :: Maybe MimeTypes
-                                , getRequest        :: Maybe HTTP.Request
-                                , getResponse       :: Maybe HTTP.Response
+                                , getParams         :: Maybe Params
+                                , getRequest        :: Maybe (HTTP.Request String)
+                                , getResponse       :: Maybe (HTTP.Response String)
                                 , getRoutes         :: Maybe Routes
                                 , getSession        :: Maybe Session
                                 , getSettings       :: Maybe Settings
@@ -42,8 +47,10 @@ data Environment =  Environment { getCodeStore      :: Maybe CodeStore
 newEnvironment :: Environment
 newEnvironment = Environment { getCodeStore      = Nothing
                              , getDatabase       = Nothing
+                             , getFiles          = Nothing
                              , getLoggerLock     = Nothing
                              , getMimeTypes      = Nothing
+                             , getParams         = Nothing
                              , getRequest        = Nothing
                              , getResponse       = Nothing
                              , getRoutes         = Nothing
@@ -67,9 +74,9 @@ type CodeMap    = M.Map CodeLocation CodeStatus
 data CodeStatus = CodeLoadMissing |
                   CodeLoadFailure String |
                   CodeLoadController          (StateT Environment IO ())                 CodeDate |
-                  CodeLoadView                (XMLGenT (StateT Environment IO) XML     ) CodeDate |
+                  CodeLoadView                (StateT Environment IO Html) CodeDate |
                   CodeLoadComponentController (StateT Environment IO ())                 CodeDate |
-                  CodeLoadComponentView       (XMLGenT (StateT Environment IO) XML     ) CodeDate
+                  CodeLoadComponentView       (StateT Environment IO Html) CodeDate
 
 
 --
@@ -95,6 +102,12 @@ data Cookie = Cookie {
             deriving (Show, Read, Eq, Ord)
 
 --
+-- * Types for Files
+--
+
+data Files = Files (M.Map String MIMEValue)
+
+--
 -- * Types for Logger
 --
 
@@ -110,6 +123,12 @@ data MimeType = MimeType String String
 
 instance Show MimeType where
      showsPrec _ (MimeType part1 part2) = showString (part1 ++ '/':part2)
+
+--
+-- * Types for Files
+--
+
+data Params = Params (M.Map String String)
 
 --
 -- * Types for Request

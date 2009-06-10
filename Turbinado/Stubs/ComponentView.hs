@@ -4,5 +4,5 @@ import Turbinado.View.Helpers
 import Control.Monad.Trans
 
 -- SPLIT HERE
-markup :: View XML
+markup :: VHtml
 

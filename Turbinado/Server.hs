@@ -1,4 +1,4 @@
-module Main where
+module Turbinado.Server where
 
 import Control.Concurrent
 import Control.Monad

@@ -5,17 +5,16 @@ module Turbinado.View.Helpers.Tags (
   ) where 
 
 import Turbinado.View.Monad
-import Turbinado.View.XML
-import Turbinado.View.XMLGenerator
+import Turbinado.View.HTML
 
-anchorTag :: String -> String -> View XML
-anchorTag l t = <a href=l><% t %></a>
+anchorTag :: String -> String -> VHtml
+anchorTag l t = (tag "a"![strAttr "href" l]) (stringToVHtml t)
 
-javaScriptFile :: String -> View XML
-javaScriptFile f = return $ cdata $ "<script type=\"text/javascript\" src=\"/js/" ++ f ++ ".js\"></script>"
+javaScriptFile :: String -> VHtml
+javaScriptFile f = itag "script"![strAttr "type" "text/javascript", strAttr "src" $ "/js/" ++ f ++ ".js"]
 
-javaScriptBlock :: String -> View XML
-javaScriptBlock s = return $ cdata $ "<script type=\"text/javascript\">" ++ s ++ "</script>"
+javaScriptBlock :: String -> VHtml
+javaScriptBlock s = (tag "script"![strAttr "type" "text/javascript"])(stringToVHtml s) 
 
 
 

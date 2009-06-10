@@ -4,7 +4,7 @@ module Turbinado.Environment.Header (
   ) where
 
 import Data.Maybe
-import Network.HTTP
+import qualified Network.HTTP as HTTP
 import Network.HTTP.Headers
 
 import Turbinado.Controller.Monad

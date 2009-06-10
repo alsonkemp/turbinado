@@ -12,7 +12,7 @@ import Control.Monad.State
 import Data.Maybe
 import Turbinado.Environment.Types
 
-addRequestToEnvironment :: (HasEnvironment m) => HTTP.Request -> m ()
+addRequestToEnvironment :: (HasEnvironment m) => HTTP.Request String -> m ()
 addRequestToEnvironment req = do e <- getEnvironment
                                  setEnvironment $ e {getRequest = Just $ req}
 

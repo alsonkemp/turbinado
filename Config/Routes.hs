@@ -1,14 +1,11 @@
 module Config.Routes where
 
+import App.Controllers.HelloWorld
+import App.Layouts.Default
+
 --
 -- Import modules for which you'll be creating static routes.
 --
--- e.g.
--- import App.Layouts.Default
--- import App.Controllers.Home
--- import App.Controllers.Develop
--- import App.Views.Home.Index
--- import App.Views.Develop.Index
 
 --
 -- Configure dynamic routes for on-the-fly compiled-and-loaded
@@ -27,15 +24,15 @@ routes = [ "/:controller/:action/:id.:format"
 --
 staticLayouts =
     [
-    -- ("App/Layouts/Default.hs",     "markup", App.Layouts.Default.markup)
+      ("App/Layouts/Default.hs",    "index", App.Layouts.Default.markup)
     ]
 
 staticControllers = 
     [ 
-    --("App/Controllers/Home.hs",    "index", App.Controllers.Home.index)
+      ("App/Controller/HelloWorld.hs",    "index", App.Controllers.HelloWorld.index)
     ]
 
 staticViews =
     [
-    --  ("App/Views/Develop/Index.hs", "markup", App.Views.Develop.Index.markup)
+      -- example: ("App/Views/HelloWorld/Index.hs",    "index", App.Views.HelloWorld.index)
     ]

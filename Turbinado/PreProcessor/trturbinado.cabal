@@ -1,0 +1,34 @@
+Name:                trturbinado
+Version:             0.7
+Synopsis:            Preprocessor for Haskell web application server
+Description:         The Haskell web application server
+License:             BSD3
+License-file:        LICENSE
+Author:              Alson Kemp
+Maintainer:          Alson Kemp (alson@alsonkemp.com)
+Homepage:            http://www.turbinado.org
+Build-Type:          Simple
+Cabal-Version:          >= 1.6
+
+Executable trturbinado
+  Main-is:             trturbinado.hs
+  Build-Depends:       base >= 4, 
+                       containers, 
+                       directory, 
+                       filepath,
+                       mtl, 
+                       parsec, 
+                       xhtml
+  Extensions: MultiParamTypeClasses,
+              FunctionalDependencies,
+              TypeFamilies,
+              RankNTypes,
+              PolymorphicComponents,
+              FlexibleContexts,
+              FlexibleInstances,
+              EmptyDataDecls,
+              TypeSynonymInstances,
+              PatternGuards,
+              MultiParamTypeClasses,
+              ScopedTypeVariables
+

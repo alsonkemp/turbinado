@@ -24,6 +24,7 @@ module Turbinado.Controller (
         module Turbinado.Controller.Routes,
         module Turbinado.Environment.CodeStore,
         module Turbinado.Environment.Cookie,
+        module Turbinado.Environment.Files,
         module Turbinado.Environment.Header,
         module Turbinado.Environment.Logger,
         module Turbinado.Environment.Params,
@@ -47,6 +48,7 @@ import Config.Master
 import Turbinado.Environment.CodeStore
 import Turbinado.Environment.Cookie
 import Turbinado.Environment.Database
+import Turbinado.Environment.Files
 import Turbinado.Environment.Header
 import Turbinado.Environment.Logger
 import Turbinado.Environment.Params

@@ -30,7 +30,7 @@ import Turbinado.Environment.Request
 import Turbinado.Environment.Response
 import Turbinado.Utility.Data
 import Turbinado.View.Monad hiding (liftIO)
-import Turbinado.View.XML
+import Turbinado.View.HTML
 import Turbinado.Controller.Monad
 
 -- | Create a new store for Code data
@@ -117,7 +117,8 @@ loadCode ct cmap cl = do
 mergeCode :: (HasEnvironment m) => CodeType -> CodeMap -> CodeLocation -> m CodeMap
 mergeCode ct cmap cl = do
     debugM $ "\tMerging " ++ (fst cl)
-    ms <- customMergeToDir (joinPath [normalise $ getStub ct]) (fst cl) compiledDir
+    let stub = (joinPath [normalise $ getStub ct])
+    ms <- customMergeToDir  stub (fst cl) compiledDir
     case ms of
         MergeFailure err            -> do debugM ("\tMerge error : " ++ (show err))
                                           return $ insert cl (CodeLoadFailure $ unlines err) cmap
