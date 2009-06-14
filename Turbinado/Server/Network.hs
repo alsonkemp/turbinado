@@ -1,10 +1,13 @@
 module Turbinado.Server.Network (
-          receiveRequest 	-- :: Handle -> IO Request
-        , sendResponse		-- :: Handle -> Response -> IO ()
+          receiveHTTPRequest
+        , sendHTTPResponse
+        , receiveCGIRequest
+        , sendCGIResponse
         ) where
 
 import Data.Maybe
 import Network.Socket
+import Network.FastCGI
 import Network.HTTP hiding (receiveHTTP, respondHTTP)
 import Network.HTTP.Stream
 import Network.StreamSocket
@@ -24,10 +27,8 @@ import Turbinado.Utility.Data
 
 
 -- | Read the request from client.
-receiveRequest :: Maybe Socket -> Controller ()
-receiveRequest Nothing     = do e <- getEnvironment
-                                acceptCGI
-receiveRequest (Just sock) = do
+receiveHTTPRequest :: Socket -> Controller ()
+receiveHTTPRequest sock = do
         req <- liftIO $ receiveHTTP sock
         case req of
          Left e -> throwTurbinado $ BadRequest $ "In receiveRequest : " ++ show e
@@ -36,29 +37,23 @@ receiveRequest (Just sock) = do
 
 -- | Get the 'Response' from the 'Environment' and send
 -- it back to the client.
-sendResponse :: Maybe Socket -> Environment -> IO ()
-sendResponse Nothing e = respondCGI $ fromJust' "Network : sendResponse" $ Turbinado.Environment.Types.getResponse e
-sendResponse (Just sock) e = do
-  respondHTTP sock $ fromJust' "Network : sendResponse" $ Turbinado.Environment.Types.getResponse e
+sendHTTPResponse :: Socket -> Controller ()
+sendHTTPResponse sock = do e <- getEnvironment
+                           liftIO $ respondHTTP sock $ fromJust' "Network : sendResponse" $ Turbinado.Environment.Types.getResponse e
 
 -- | Pull a CGI request from stdin
-acceptCGI :: Controller ()
-acceptCGI = do body <- liftIO $ hGetContents stdin
-               hdrs <- liftIO $ Env.getEnvironment
-               let rqheaders = parseHeaders $ extractHTTPHeaders hdrs
-                   rquri = fromJust' "Network: acceptCGI: parseURI failed" $ parseURI $ 
-                             fromJust' "Network: acceptCGI: No REQUEST_URI in hdrs" $ lookup "SCRIPT_URI" hdrs
-                   rqmethod = fromJust' "Network: acceptCGI: REQUEST_METHOD invalid" $ flip lookup rqMethodMap $
-                                fromJust' "Network: acceptCGI: No REQUEST_METHOD in hdrs" $ lookup "REQUEST_METHOD" hdrs
+receiveCGIRequest :: URI -> String -> String -> [(String, String)] -> Controller ()
+receiveCGIRequest rquri rqmethod rqbody hdrs = 
+            do let rqheaders = parseHeaders $ extractHTTPHeaders hdrs
                case rqheaders of
                 Left err -> errorResponse $ show err
                 Right r  -> do e' <- getEnvironment
                                setEnvironment $ e' {
                                 Turbinado.Environment.Types.getRequest = 
                                              Just Request { rqURI = rquri
-                                                          , rqMethod = rqmethod
+                                                          , rqMethod = matchRqMethod rqmethod
                                                           , rqHeaders = r
-                                                          , rqBody = body
+                                                          , rqBody = rqbody
                                                           }
                                 }
 
@@ -72,10 +67,13 @@ matchRqMethod m = fromJust' "Turbinado.Server.Network:matchRqMethod" $
                              ]
 
 -- | Convert the HTTP.Response to a CGI response for stdout.
-respondCGI :: Response String -> IO ()
-respondCGI r = do let message = (unlines $ drop 1 $ lines $ show r) ++ "\n\n" ++ rspBody r   -- need to drop the first line from the response for CGI
-                  hPutStr stdout message
-                  hFlush stdout
+sendCGIResponse :: Environment -> CGI CGIResult
+sendCGIResponse e = do let r = fromJust' "Network: respondCGI: getResponse failed" $ getResponse e
+                           (c1,c2,c3) = rspCode r
+                           message = (unlines $ drop 1 $ lines $ show r) ++ "\n\n" ++ rspBody r   -- need to drop the first line from the response for CGI
+                       mapM_ (\(Header k v) -> setHeader (show k) v) $ rspHeaders r  
+                       setStatus (100*c1+10*c2+c3) (rspReason r)
+                       output $ rspBody r
 
 -- | Convert from HTTP_SOME_FLAG to Some-Flag for HTTP.parseHeaders
 extractHTTPHeaders :: [(String, String)] -> [String]

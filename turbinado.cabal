@@ -12,11 +12,13 @@ Cabal-Version:          >= 1.6
 
 Executable turbinado
   Main-is:             Turbinado/Main.hs
+  ghc-options:         -threaded
   Build-Depends:       base >= 4, 
                        containers, 
                        Crypto > 4.1.0, 
                        dataenc,
                        directory, 
+                       fastcgi,
                        filepath,
                        HDBC >= 2, 
                        HDBC-odbc >= 2,
@@ -46,12 +48,10 @@ Executable turbinado
             EmptyDataDecls,
             CPP,
             TypeSynonymInstances,
-            OverlappingInstances,
-            UndecidableInstances,
             PatternGuards,
             MultiParamTypeClasses,
             ScopedTypeVariables,
-            DeriveDataTypeable
+            UndecidableInstances
 
 -- Creating a Library mostly in order to make documentation.  
 Library

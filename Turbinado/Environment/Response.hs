@@ -16,16 +16,13 @@ import System.Time
 import System.Locale
 
 
---getResponse :: (HasEnvironment m) => m HTTP.Response
---getResponse  = do e <- getEnvironment
---                  return $ getResponse e
-
 setResponse :: (HasEnvironment m) => HTTP.Response String -> m ()
 setResponse resp = do e <- getEnvironment
                       setEnvironment $ e {getResponse = Just resp}
 
-isResponseComplete :: Environment -> Bool
-isResponseComplete e =  case (getResponse e) of
-                          Nothing -> False
-                          Just r' -> (HTTP.rspCode r' /= (0,0,0))
+isResponseComplete :: (HasEnvironment m) => m Bool
+isResponseComplete =   do e <- getEnvironment
+                          case (getResponse e) of
+                            Nothing -> return False
+                            Just r' -> return (HTTP.rspCode r' /= (0,0,0))
 

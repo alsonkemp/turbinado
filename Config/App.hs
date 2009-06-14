@@ -3,7 +3,8 @@ module Config.App (
   customSetupFilters,
   customPreFilters,
   customPostFilters,
-  logLevel
+  logLevel,
+  maxFCGIThreads
   ) where
 
 import System.Log.Logger
@@ -44,4 +45,10 @@ customPostFilters   = [persistSession  sessionOpts]
 ----------------------------------------------------------------
 logLevel = DEBUG -- DEBUG < INFO < NOTICE < WARNING < ERROR < CRITICAL < ALERT < EMERGENCY 
 
+
+----------------------------------------------------------------
+-- FastCGI
+----------------------------------------------------------------
+maxFCGIThreads :: Int
+maxFCGIThreads = 4
 

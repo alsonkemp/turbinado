@@ -61,16 +61,21 @@ postFilters = []
 -- then runs the Controller and View.
 processRequest :: Controller ()
 processRequest = do
-          debugM $ " requestHandler : running pre and main filters"
-          -- Run the Pre filters, the page
-          sequence_ $ preFilters ++
-                      customPreFilters ++
-                      [ retrieveAndRunController
-                      , checkFormats
-                      , retrieveAndRunLayout
-                      ] 
-          debugM $ " requestHandler : running post filters"
-          sequence_ (customPostFilters ++ postFilters)
+          debugM $ " requestHandler : checking to see if the response is complete"
+          complete <- isResponseComplete
+          case complete of
+                True -> do debugM $ " processRequest : response was already complete"
+                           return ()
+                False -> do debugM $ " requestHandler : running pre and main filters"
+                            -- Run the Pre filters, the page
+                            sequence_ $ preFilters ++
+                                        customPreFilters ++
+                                        [ retrieveAndRunController
+                                        , checkFormats
+                                        , retrieveAndRunLayout
+                                        ] 
+                            debugM $ " requestHandler : running post filters"
+                            sequence_ (customPostFilters ++ postFilters)
 
 
 -- | This function dynamically loads (if needed) the 'Controller'
@@ -80,7 +85,8 @@ retrieveAndRunController :: Controller ()
 retrieveAndRunController =
            do debugM $ " retrieveAndRunController : Starting"
               e <- getEnvironment
-              case (isResponseComplete e) of
+              complete <- isResponseComplete
+              case complete of
                 True -> do debugM $ " retrieveAndRunController : response was already complete"
                            return ()
                 False -> do co <- getController
@@ -101,7 +107,8 @@ retrieveAndRunController =
 retrieveAndRunLayout :: Controller ()
 retrieveAndRunLayout =
            do e <- getEnvironment
-              case (isResponseComplete e) of
+              complete <- isResponseComplete
+              case complete of
                 True -> do debugM $ " retrieveAndRunLayout : response was already complete"
                            return ()
                 False -> do l <- getSetting "layout"
